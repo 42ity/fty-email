@@ -38,10 +38,8 @@ void
 fty_email_private_selftest (bool verbose)
 {
 // Tests for stable private classes:
-    alert_test (verbose);
     emailconfiguration_test (verbose);
     email_test (verbose);
-    elementlist_test (verbose);
     subprocess_test (verbose);
 }
 /*

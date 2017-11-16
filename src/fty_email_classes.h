@@ -35,10 +35,6 @@
 //  Extra headers
 
 //  Opaque class structures to allow forward references
-#ifndef ALERT_T_DEFINED
-typedef struct _alert_t alert_t;
-#define ALERT_T_DEFINED
-#endif
 #ifndef EMAILCONFIGURATION_T_DEFINED
 typedef struct _emailconfiguration_t emailconfiguration_t;
 #define EMAILCONFIGURATION_T_DEFINED
@@ -47,29 +43,19 @@ typedef struct _emailconfiguration_t emailconfiguration_t;
 typedef struct _email_t email_t;
 #define EMAIL_T_DEFINED
 #endif
-#ifndef ELEMENTLIST_T_DEFINED
-typedef struct _elementlist_t elementlist_t;
-#define ELEMENTLIST_T_DEFINED
-#endif
 #ifndef SUBPROCESS_T_DEFINED
 typedef struct _subprocess_t subprocess_t;
 #define SUBPROCESS_T_DEFINED
 #endif
 
 //  Internal API
-#include "alert.h"
+
 #include "emailconfiguration.h"
 #include "email.h"
-#include "elementlist.h"
 #include "subprocess.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_EMAIL_BUILD_DRAFT_API
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_EMAIL_PRIVATE void
-    alert_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
@@ -80,11 +66,6 @@ FTY_EMAIL_PRIVATE void
 //  Self test of this class.
 FTY_EMAIL_PRIVATE void
     email_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_EMAIL_PRIVATE void
-    elementlist_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

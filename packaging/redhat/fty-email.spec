@@ -28,6 +28,7 @@
 %else
 %define DRAFTS no
 %endif
+%define SYSTEMD_UNIT_DIR %(pkg-config --variable=systemdsystemunitdir systemd)
 Name:           fty-email
 Version:        1.0.0
 Release:        1
@@ -99,6 +100,7 @@ This package contains development files for fty-email: email transport for 42ity
 %{_mandir}/man7/*
 
 %prep
+
 %setup -q
 
 %build
@@ -115,13 +117,14 @@ find %{buildroot} -name '*.la' | xargs rm -f
 
 %files
 %defattr(-,root,root)
+%doc README.md
 %{_bindir}/fty-email
 %{_mandir}/man1/fty-email*
 %{_bindir}/fty-sendmail
 %{_mandir}/man1/fty-sendmail*
 %{_bindir}/fty-device-scan
 %config(noreplace) %{_sysconfdir}/fty-email/fty-email.cfg
-/usr/lib/systemd/system/fty-email.service
+%{SYSTEMD_UNIT_DIR}/fty-email.service
 %dir %{_sysconfdir}/fty-email
 %if 0%{?suse_version} > 1315
 %post

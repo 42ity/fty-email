@@ -40,10 +40,8 @@
         release = "42ity"
         />
 
-    <class name = "alert" private="1">Alert representation</class>
     <class name = "emailconfiguration" private="1">Class that is responsible for email configuration</class>
     <class name = "email" private="1">Smtp</class>
-    <class name = "elementlist" private="1">ElementList</class>
     <class name = "subprocess" private="1">Subprocess</class>
     <class name = "fty_email_server" state = "stable">Email transport</class>
 
