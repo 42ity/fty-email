@@ -77,7 +77,7 @@ fty-sendmail.txt: $(top_srcdir)/src/fty_sendmail.cc
 	"$(srcdir)/mkman" "fty_sendmail" "$(builddir)/fty-sendmail.txt" "$(srcdir)/.."
 
 
-clean:
+clean-local:
 	rm -f *.1 *.3 *.7 $(GENERATED_DOCS)
 
 doc: $(GENERATED_DOCS)

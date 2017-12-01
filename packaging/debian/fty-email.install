@@ -1,7 +1,5 @@
 usr/bin/fty-email
-usr/share/man/man1/fty-email.1
 usr/bin/fty-sendmail
-usr/share/man/man1/fty-sendmail.1
 usr/bin/fty-device-scan
 etc/fty-email/fty-email.cfg
 lib/systemd/system/fty-email.service
