@@ -18,10 +18,8 @@ include_HEADERS = \
     include/fty_email_library.h
 
 src_libfty_email_la_SOURCES = \
-    src/alert.cc \
     src/emailconfiguration.cc \
     src/email.cc \
-    src/elementlist.cc \
     src/subprocess.cc \
     src/fty_email_server.cc \
     src/platform.h

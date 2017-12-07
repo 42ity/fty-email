@@ -55,9 +55,9 @@ sections, agent has the following configuration options:
 
 * under malamute section:
     * consumers/<stream> - subscribe fty-email to specified streams and use regular expression filtering on them.
-        Leave at default values unless you KNOW what you are doing.
-    * producer - set fty-email to publish on specified stream
-    * timeout - set timeout for connecting to Malamute broker (default value 1s)
+        Unused by default.
+    * producer - set fty-email to publish on specified stream. Unused by default.
+    * timeout - set timeout for connecting to Malamute broker (default value is 1 second)
 
 Values read from configuration file can be overwritten by setting the following environment variables:
 
@@ -82,7 +82,7 @@ Actor is a server actor: handles e-mail configuration, notification via e-mail/S
 
 This actor can be run in full, or in sendmail-only mode (when it doesn't connect to the Malamute broker).
 
-Timer is a notification timer - runs every second and checks the alerts cache to see whether we have any alerts for which we need to send e-mail/SMS notification.
+Timer runs every second and checks whether the config file changes - if it did, it issues the LOAD command to the actor.
 
 ## Protocols
 
@@ -108,7 +108,9 @@ It is possible to request the fty-email agent for:
 
 * sending e-mail with user-specified headers
 
-* sending e-mail/SMS notification for specified alert
+* sending e-mail notification for specified alert
+
+* sending SMS notification for specified alert
 
 #### Sending e-mail with default headers
 
@@ -147,7 +149,7 @@ where
 * '/' indicates a multipart string message
 * 'correlation\-id' is a zuuid identifier provided by the caller
 * 'to' MUST be valid To: header
-* 'subject' MUST be valiud Subject: header
+* 'subject' MUST be valid Subject: header
 * 'body' MUST be valid body of e-mail
 * 'header-1',...,'header-n' MAY be other headers
 * 'path-1',...,'path-m' MAY be present and MUST be, if present, paths to text OR binary files
@@ -166,7 +168,7 @@ where
 * 'reason' is string detailing reason for error (just what() for the thrown runtime error)
 * subject of the message must be SENDMAIL-OK for OK message and SENDMAIL-ERROR for error message
 
-#### Sending e-mail/SMS notification for specified alert
+#### Sending e-mail notification for specified alert
 
 The USER peer sends the following messages using MAILBOX SEND to
 FTY-EMAIL-AGENT ("fty-email") peer:
@@ -178,9 +180,9 @@ FTY-EMAIL-AGENT ("fty-email") peer:
 where
 * '/' indicates a multipart string message
 * 'correlation\-id' is a zuuid identifier provided by the caller
-* 'priority' MUST be valid asset priority
+* 'priority' MUST be valid asset priority (1 - 5)
 * 'extname' MUST be valid user-friendly asset name
-* 'contact' MUST be empty string OR valid e-mail/phone number
+* 'contact' MUST be empty string OR valid e-mail
 * 'fty\_proto ALERT message' must be valid fty\_proto message of the type ALERT
 * subject of the message MUST be "SENDMAIL\_ALERT".
 
@@ -195,6 +197,36 @@ where
 * 'correlation\-id' is a zuuid identifier provided by the caller
 * 'reason' is string detailing reason for error (just what() for the thrown runtime error)
 * subject of the message must be "SENDMAIL\_ALERT"
+
+#### Sending SMS notification for specified alert
+
+The USER peer sends the following messages using MAILBOX SEND to
+FTY-EMAIL-AGENT ("fty-email") peer:
+
+* correlation\-id/priority/extname/contact/fty\_proto ALERT message
+    - send notification for asset 'extname' with priority 'priority' to 'contact',
+    where content of the notification is specified by the ALERT message
+
+where
+* '/' indicates a multipart string message
+* 'correlation\-id' is a zuuid identifier provided by the caller
+* 'priority' MUST be valid asset priority (1 - 5)
+* 'extname' MUST be valid user-friendly asset name
+* 'contact' MUST be empty string OR valid phone number
+* 'fty\_proto ALERT message' must be valid fty\_proto message of the type ALERT
+* subject of the message MUST be "SENDSMS\_ALERT".
+
+The FTY-EMAIL-AGENT peer MUST respond with one of the messages back to USER
+peer using MAILBOX SEND.
+
+* correlation\-id/OK
+* correlation\-id/ERROR/reason
+
+where
+* '/' indicates a multipart frame message
+* 'correlation\-id' is a zuuid identifier provided by the caller
+* 'reason' is string detailing reason for error (just what() for the thrown runtime error)
+* subject of the message must be "SENDSMS\_ALERT"
 
 ### Stream subscriptions
 

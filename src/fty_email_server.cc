@@ -33,26 +33,11 @@ int agent_smtp_verbose = true;
 
 #include "fty_email_classes.h"
 
-#include <cxxtools/serializationinfo.h>
-#include <cxxtools/jsondeserializer.h>
-#include <cxxtools/jsonserializer.h>
-#include <cxxtools/regex.h>
-#include <iterator>
-#include <map>
 #include <set>
-#include <vector>
 #include <tuple>
 #include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <malamute.h>
-#include <fty_proto.h>
-#include <math.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <functional>
-#include <cxxtools/split.h>
+#include <algorithm>
 
 #include "email.h"
 #include "emailconfiguration.h"
@@ -153,6 +138,7 @@ fty_email_server (zsock_t *pipe, void* args)
     char *endpoint = NULL;
     char *test_reader_name = NULL;
     char *sms_gateway = NULL;
+    char *gw_template = NULL;
 
     mlm_client_t *test_client = NULL;
     mlm_client_t *client = mlm_client_new ();
@@ -213,6 +199,10 @@ fty_email_server (zsock_t *pipe, void* args)
                 // SMS_GATEWAY
                 if (s_get (config, "smtp/smsgateway", NULL)) {
                     sms_gateway = strdup (s_get (config, "smtp/smsgateway", NULL));
+                }
+                if (s_get (config, "smtp/gwtemplate", NULL)) {
+                    // return empty string because of conversion to std::string
+                    gw_template = strdup (s_get (config, "smtp/gwtemplate", ""));
                 }
                 // MSMTP_PATH
                 if (s_get (config, "smtp/msmtppath", NULL)) {
@@ -424,16 +414,27 @@ fty_email_server (zsock_t *pipe, void* args)
                 if (r == -1)
                     zsys_error ("Can't send a reply for SENDMAIL to %s", mlm_client_sender (client));
             }
-            else if (topic == "SENDMAIL_ALERT") {
+            else if (topic == "SENDMAIL_ALERT" || topic == "SENDSMS_ALERT") {
                 char *priority = zmsg_popstr (zmessage);
                 char *extname = zmsg_popstr (zmessage);
                 char *contact = zmsg_popstr (zmessage);
                 fty_proto_t *alert = fty_proto_decode (&zmessage);
+                std::string gateway = gw_template == NULL ? "" : gw_template;
+                std::string converted_contact = contact == NULL ? "" : contact;
+
                 try {
-                    s_notify (smtp, priority, extname, contact, alert);
+                    if (topic == "SENDSMS_ALERT") {
+                        zsys_debug ("gw_template = %s", gw_template);
+                        zsys_debug ("contact = %s", contact);
+                        std::string _contact = sms_email_address (gateway, converted_contact);
+                        s_notify (smtp, priority, extname, _contact, alert);
+                    }
+                    else {
+                        s_notify (smtp, priority, extname, converted_contact, alert);
+                    }
                     zmsg_addstr (reply, "OK");
                 }
-                catch (const std::runtime_error &re) {
+                catch (const std::exception &re) {
                     zsys_error ("Sending of e-mail/SMS alert failed : %s", re.what ());
                     zmsg_addstr (reply, "ERROR");
                     zmsg_addstr (reply, re.what ());
@@ -441,7 +442,7 @@ fty_email_server (zsock_t *pipe, void* args)
                 int r = mlm_client_sendto (
                         client,
                         mlm_client_sender (client),
-                        "SENDMAIL_ALERT",
+                        (topic == "SENDMAIL_ALERT") ? "SENDMAIL_ALERT" : "SENDSMS_ALERT",
                         NULL,
                         1000,
                         &reply);
@@ -465,6 +466,7 @@ fty_email_server (zsock_t *pipe, void* args)
     zstr_free (&endpoint);
     zstr_free (&test_reader_name);
     zstr_free (&sms_gateway);
+    zstr_free (&gw_template);
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
     mlm_client_destroy (&test_client);
@@ -590,6 +592,7 @@ fty_email_server_test (bool verbose)
     assert ( smtp_server != NULL );
 
     zconfig_t *config = zconfig_new ("root", NULL);
+    zconfig_put (config, "smtp/gwtemplate", "0#####@hyper.mobile");
     zconfig_put (config, "malamute/endpoint", endpoint);
     zconfig_put (config, "malamute/address", "agent-smtp");
     zconfig_save (config, smtpcfg_file);
@@ -616,8 +619,10 @@ fty_email_server_test (bool verbose)
         zsys_debug ("Test #2 - send an alert on correct asset");
         const char *asset_name = "ASSET1";
         //      1. send alert message
+        zlist_t *actions = zlist_new ();
+        zlist_append (actions, (void *) "EMAIL");
         zmsg_t *msg = fty_proto_encode_alert (NULL, zclock_time ()/1000, 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", "EMAIL");
+                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -640,6 +645,7 @@ fty_email_server_test (bool verbose)
         zstr_free (&str);
         zmsg_destroy (&reply);
         zuuid_destroy (&zuuid);
+        zlist_destroy (&actions);
 
         //      2. read the email generated for alert
         msg = mlm_client_recv (btest_reader);
@@ -692,8 +698,10 @@ fty_email_server_test (bool verbose)
         const char *asset_name1 = "ASSET2";
 
         //      1. send alert message
+        zlist_t *actions = zlist_new ();
+        zlist_append (actions, (void *) "EMAIL");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name1, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", "EMAIL");
+                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -716,6 +724,7 @@ fty_email_server_test (bool verbose)
         zstr_free (&str);
         zmsg_destroy (&reply);
         zuuid_destroy (&zuuid);
+        zlist_destroy (&actions);
 
         //      3. No mail should be generated
         zpoller_t *poller = zpoller_new (mlm_client_msgpipe(btest_reader), NULL);
@@ -732,8 +741,10 @@ fty_email_server_test (bool verbose)
         zsys_debug ("Test #4 - send alert on incorrect asset - empty name");
         //      1. send alert message
         const char *asset_name = "ASSET3";
+        zlist_t *actions = zlist_new ();
+        zlist_append (actions, (void *) "EMAIL");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", "EMAIL");
+                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -756,6 +767,7 @@ fty_email_server_test (bool verbose)
         zstr_free (&str);
         zmsg_destroy (&reply);
         zuuid_destroy (&zuuid);
+        zlist_destroy (&actions);
 
         //      3. No mail should be generated
         zpoller_t *poller = zpoller_new (mlm_client_msgpipe(btest_reader), NULL);
@@ -772,8 +784,10 @@ fty_email_server_test (bool verbose)
         // scenario 3: send asset without email + send an alert on the already known asset
         //      2. send alert message
         const char *asset_name = "ASSET3";
+        zlist_t *actions = zlist_new ();
+        zlist_append (actions, (void *) "EMAIL");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", "EMAIL");
+                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -796,6 +810,7 @@ fty_email_server_test (bool verbose)
         zstr_free (&str);
         zmsg_destroy (&reply);
         zuuid_destroy (&zuuid);
+        zlist_destroy (&actions);
 
         //      3. No mail should be generated
         zpoller_t *poller = zpoller_new (mlm_client_msgpipe(btest_reader), NULL);
@@ -807,9 +822,60 @@ fty_email_server_test (bool verbose)
         zpoller_destroy (&poller);
         zsys_debug ("Test #5 OK");
     }
+    // test SENDSMS_ALERT
+    {
+        zsys_debug ("Test #6 - send an alert on correct asset");
+        const char *asset_name = "ASSET1";
+        //      1. send alert message
+        zlist_t *actions = zlist_new ();
+        zlist_append (actions, (void *) "SMS");
+        zmsg_t *msg = fty_proto_encode_alert (NULL, zclock_time ()/1000, 600, "NY_RULE", asset_name, \
+                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+        assert (msg);
+
+        zuuid_t *zuuid = zuuid_new ();
+        zmsg_pushstr (msg, "+79 (0) 123456");
+        zmsg_pushstr (msg, asset_name);
+        zmsg_pushstr (msg, "1");
+        zmsg_pushstr (msg, zuuid_str_canonical (zuuid));
+
+        mlm_client_sendto (alert_producer, "agent-smtp", "SENDSMS_ALERT", NULL, 1000, &msg);
+        if (verbose)
+            zsys_info ("SENDSMS_ALERT message was sent");
+
+        zmsg_t *reply = mlm_client_recv (alert_producer);
+        assert (streq (mlm_client_subject (alert_producer), "SENDSMS_ALERT"));
+        char *str = zmsg_popstr (reply);
+        assert (streq (str, zuuid_str_canonical (zuuid)));
+        zstr_free (&str);
+        str = zmsg_popstr (reply);
+        assert (streq (str, "OK"));
+        zstr_free (&str);
+        zmsg_destroy (&reply);
+        zuuid_destroy (&zuuid);
+        zlist_destroy (&actions);
+
+        //      2. read the email generated for alert
+        msg = mlm_client_recv (btest_reader);
+        assert (msg);
+        if ( verbose ) {
+            zsys_debug ("parameters for the email:");
+            zmsg_print (msg);
+        }
+        //      3. compare the email with expected output
+        char *body = NULL;
+        do {
+            body = zmsg_popstr (msg);
+            zsys_debug ("%s", body);
+            zstr_free(&body);
+        } while (body != NULL);
+
+        zmsg_destroy (&msg);
+        zsys_debug ("Test #6 OK");
+    }
     //test SENDMAIL
     {
-        zsys_debug ("Test #6 - test SENDMAIL");
+        zsys_debug ("Test #7 - test SENDMAIL");
         rv = mlm_client_sendtox (alert_producer, "agent-smtp", "SENDMAIL", "UUID", "foo@bar", "Subject", "body", NULL);
         assert (rv != -1);
         zmsg_t *msg = mlm_client_recv (alert_producer);
@@ -835,7 +901,7 @@ fty_email_server_test (bool verbose)
         if (verbose)
             zmsg_print (msg);
         zmsg_destroy (&msg);
-        zsys_debug ("Test #6 OK");
+        zsys_debug ("Test #7 OK");
     }
 
     // clean up after the test

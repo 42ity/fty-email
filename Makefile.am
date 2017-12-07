@@ -55,10 +55,8 @@ EXTRA_DIST += \
 endif
 
 EXTRA_DIST += \
-    src/alert.h \
     src/emailconfiguration.h \
     src/email.h \
-    src/elementlist.h \
     src/subprocess.h \
     README.md \
     src/fty_email_classes.h

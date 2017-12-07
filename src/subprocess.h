@@ -26,15 +26,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <cxxtools/posix/fork.h>
 
-#include <climits>
 #include <cstring>
 #include <unistd.h>
-
-#include <vector>
-#include <deque>
 #include <string>
 #include <sstream>
-#include <map>
 
 /* \brief Helper classes for managing processes
  *

@@ -10,6 +10,7 @@ smtp
     from = joe.doe@mail.example.com                 #   From field
     encryption = NONE                               #   Encryption, (NONE|TLS|STARTTLS)
     smsgateway = ""                                 #   SMS gateway
+    gwtemplate = "0#####@hyper.mobile"              #   SMS template
     verify_ca = false                               #   Verify CA
     use_auth = false                                #   Pass user/password to msmtp or not
 malamute

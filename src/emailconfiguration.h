@@ -24,9 +24,6 @@
 
 #include <string>
 
-#include "alert.h"
-#include "elementlist.h"
-
 std::string
 generate_body (fty_proto_t *alert, const std::string& priority, const std::string& extname);
 
