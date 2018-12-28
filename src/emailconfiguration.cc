@@ -92,7 +92,10 @@ s_generateEmailBodyResolved (fty_proto_t *alert, const std::string& extname)
     zstr_free (&result_char);
     result = replace_tokens (result, "__rulename__", fty_proto_rule (alert));
     result = replace_tokens (result, "__assetname__", extname);
-    result = replace_tokens (result, "__description__", fty_proto_description (alert));
+    char *description_char = translation_get_translated_text (fty_proto_description (alert));
+    std::string description (description_char);
+    zstr_free (&description_char);
+    result = replace_tokens (result, "__description__", description.c_str ());
     return result;
 }
 
@@ -104,7 +107,10 @@ s_generateEmailBodyActive (fty_proto_t *alert, const std::string& priority, cons
     zstr_free (&result_char);
     result = replace_tokens (result, "__rulename__", fty_proto_rule (alert));
     result = replace_tokens (result, "__assetname__", extname);
-    result = replace_tokens (result, "__description__", fty_proto_description (alert));
+    char *description_char = translation_get_translated_text (fty_proto_description (alert));
+    std::string description (description_char);
+    zstr_free (&description_char);
+    result = replace_tokens (result, "__description__", description.c_str ());
     result = replace_tokens (result, "__priority__", priority);
     result = replace_tokens (result, "__severity__", fty_proto_severity (alert));
     result = replace_tokens (result, "__state__", fty_proto_state (alert));
@@ -130,7 +136,10 @@ s_generateEmailSubjectActive (fty_proto_t *alert, const std::string& priority, c
     zstr_free (&result_char);
     result = replace_tokens (result, "__rulename__", fty_proto_rule (alert));
     result = replace_tokens (result, "__assetname__", extname);
-    result = replace_tokens (result, "__description__", fty_proto_description (alert));
+    char *description_char = translation_get_translated_text (fty_proto_description (alert));
+    std::string description (description_char);
+    zstr_free (&description_char);
+    result = replace_tokens (result, "__description__", description.c_str ());
     result = replace_tokens (result, "__priority__", priority);
     result = replace_tokens (result, "__severity__", fty_proto_severity (alert));
     result = replace_tokens (result, "__state__", fty_proto_state (alert));

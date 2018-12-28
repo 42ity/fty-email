@@ -595,8 +595,9 @@ fty_email_server_test (bool verbose)
         //      1. send alert message
         zlist_t *actions = zlist_new ();
         zlist_append (actions, (void *) "EMAIL");
+        std::string description ("{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
         zmsg_t *msg = fty_proto_encode_alert (NULL, zclock_time ()/1000, 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+                                      "ACTIVE","CRITICAL",description.c_str (), actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -649,7 +650,7 @@ fty_email_server_test (bool verbose)
         // expected string without date
         std::string expectedBody = "From:bios@eaton.com\nTo: scenario1.email@eaton.com\nSubject: CRITICAL alert on ASSET1 from the rule ny_rule is active!\n\n"
         "In the system an alert was detected.\nSource rule: ny_rule\nAsset: ASSET1\nAlert priority: P1\nAlert severity: CRITICAL\n"
-        "Alert description: ASDFKLHJH\nAlert state: ACTIVE\n";
+        "Alert description: Device ASSET1 does not provide expected data. It may be offline or not correctly configured.\nAlert state: ACTIVE\n";
         expectedBody.erase(remove_if(expectedBody.begin(), expectedBody.end(), isspace), expectedBody.end());
 
 
@@ -670,8 +671,9 @@ fty_email_server_test (bool verbose)
         //      1. send alert message
         zlist_t *actions = zlist_new ();
         zlist_append (actions, (void *) "EMAIL");
+        std::string description ("{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name1, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+                                      "ACTIVE","CRITICAL",description.c_str (), actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -712,8 +714,9 @@ fty_email_server_test (bool verbose)
         const char *asset_name = "ASSET3";
         zlist_t *actions = zlist_new ();
         zlist_append (actions, (void *) "EMAIL");
+        std::string description ("{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+                                      "ACTIVE","CRITICAL",description.c_str (), actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -752,8 +755,9 @@ fty_email_server_test (bool verbose)
         const char *asset_name = "ASSET3";
         zlist_t *actions = zlist_new ();
         zlist_append (actions, (void *) "EMAIL");
+        std::string description ("{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
         zmsg_t *msg = fty_proto_encode_alert (NULL, time (NULL), 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+                                      "ACTIVE","CRITICAL",description.c_str (), actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
@@ -794,8 +798,9 @@ fty_email_server_test (bool verbose)
         //      1. send alert message
         zlist_t *actions = zlist_new ();
         zlist_append (actions, (void *) "SMS");
-        zmsg_t *msg = fty_proto_encode_alert (NULL, zclock_time ()/1000, 600, "NY_RULE", asset_name, \
-                                      "ACTIVE","CRITICAL","ASDFKLHJH", actions);
+        std::string description ("{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
+        zmsg_t *msg = fty_proto_encode_alert (NULL, zclock_time()/1000, 600, "NY_RULE", asset_name, \
+                                      "ACTIVE","CRITICAL",description.c_str (), actions);
         assert (msg);
 
         zuuid_t *zuuid = zuuid_new ();
