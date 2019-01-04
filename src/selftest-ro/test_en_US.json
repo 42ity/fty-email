@@ -1,4 +1,5 @@
 {
 "In the system an alert was detected.\nSource rule: {{var1}}\nAsset: {{var2}}\nAlert priority: P{{var3}}\nAlert severity: {{var4}}\nAlert description: {{var5}}\nAlert state: {{var6}}" : "In the system an alert was detected.\nSource rule: {{var1}}\nAsset: {{var2}}\nAlert priority: P{{var3}}\nAlert severity: {{var4}}\nAlert description: {{var5}}\nAlert state: {{var6}}",
-"{{var1}} alert on {{var2}}\nfrom the rule {{var3}} is active!" : "{{var1}} alert on{{var2}}\nfrom the rule {{var3}} is active!"
+"{{var1}} alert on {{var2}}\nfrom the rule {{var3}} is active!" : "{{var1}} alert on{{var2}}\nfrom the rule {{var3}} is active!",
+"Device {{var1}} does not provide expected data. It may be offline or not correctly configured." : "Device {{var1}} does not provide expected data. It may be offline or not correctly configured."
 }
