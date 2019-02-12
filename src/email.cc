@@ -44,7 +44,7 @@ Smtp::Smtp():
     _host {},
     _port { "25" },
     _from { "EatonProductFeedback@eaton.com" },
-    _encryption { Enctryption::NONE },
+    _encryption { Encryption::NONE },
     _username {},
     _password {},
     _msmtp { "/usr/bin/msmtp" },
@@ -77,15 +77,15 @@ std::string Smtp::createConfigFile() const
     const std::string verify_ca = _verify_ca ? "on" : "off";
 
     switch (_encryption) {
-    case Enctryption::NONE:
+    case Encryption::NONE:
         line += "tls off\n"
                 "tls_starttls off\n";
         break;
-    case Enctryption::TLS:
+    case Encryption::TLS:
         line += "tls on\n"
                 "tls_certcheck " + verify_ca + "\n";
         break;
-    case Enctryption::STARTTLS:
+    case Encryption::STARTTLS:
         // TODO: check if this is correct!
         line += "tls off\n"
                 "tls_certcheck " + verify_ca + "\n"
@@ -102,6 +102,7 @@ std::string Smtp::createConfigFile() const
 
     line += "account default\n";
     line += "host " + _host +"\n";
+    line += "port " + _port +"\n";
     line += "from " + _from + "\n";
     ssize_t r = write (handle,  line.c_str(), line.size());
     if (r > 0 && (size_t) r != line.size ())
@@ -119,9 +120,9 @@ void Smtp::deleteConfigFile(std::string &filename) const
 
 void Smtp::encryption(std::string enc)
 {
-    if( strcasecmp ("starttls", enc.c_str()) == 0) encryption (Enctryption::STARTTLS);
-    if( strcasecmp ("tls", enc.c_str()) == 0) encryption (Enctryption::TLS);
-    encryption (Enctryption::NONE);
+    if( strcasecmp ("starttls", enc.c_str()) == 0) encryption (Encryption::STARTTLS);
+    if( strcasecmp ("tls", enc.c_str()) == 0) encryption (Encryption::TLS);
+    encryption (Encryption::NONE);
 }
 
 void Smtp::sendmail(

@@ -32,7 +32,6 @@
 
 #define TRANSLATION_ROOT    "/usr/share/etn-translations"
 #define TRANSLATION_PREFIX  "locale_"
-#define DEFAULT_LANGUAGE    "en_US"
 
 // hack to allow reload of config file w/o the need to rewrite server to zloop and reactors
 char *config_file = NULL;

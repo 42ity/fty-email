@@ -52,7 +52,7 @@ Example:
  *
  * Security of SMTP connection
  */
-enum class Enctryption {
+enum class Encryption {
     NONE,
     TLS,
     STARTTLS
@@ -126,7 +126,7 @@ class Smtp
 
         /** \brief set the encryption for SMTP communication (NONE|TLS|STARTTLS) */
         void encryption (std::string enc);
-        void encryption (Enctryption enc) { _encryption = enc; };
+        void encryption (Encryption enc) { _encryption = enc; };
 
         /** \brief turn on or of the CA verification */
         void verify_ca (bool verify) { _verify_ca = verify; }
@@ -217,7 +217,7 @@ class Smtp
         std::string _host;
         std::string _port;
         std::string _from;
-        Enctryption _encryption;
+        Encryption _encryption;
         std::string _username;
         std::string _password;
         std::string _msmtp;
