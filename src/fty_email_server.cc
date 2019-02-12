@@ -134,6 +134,7 @@ fty_email_server (zsock_t *pipe, void* args)
     char *test_reader_name = NULL;
     char *sms_gateway = NULL;
     char *gw_template = NULL;
+    char *language = NULL;
 
     mlm_client_t *test_client = NULL;
     mlm_client_t *client = mlm_client_new ();
@@ -175,6 +176,12 @@ fty_email_server (zsock_t *pipe, void* args)
                     break;
                 }
 
+                if (s_get (config, "server/language", DEFAULT_LANGUAGE)) {
+                    language = strdup (s_get (config, "server/language", DEFAULT_LANGUAGE));
+                    int rv = translation_change_language (language);
+                    if (rv != TE_OK)
+                        log_warning ("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
+                }
                 // SMS_GATEWAY
                 if (s_get (config, "smtp/smsgateway", NULL)) {
                     sms_gateway = strdup (s_get (config, "smtp/smsgateway", NULL));
@@ -376,8 +383,7 @@ fty_email_server (zsock_t *pipe, void* args)
                     sent_ok = false;
                     uint32_t code = static_cast <uint32_t> (msmtp_stderr2code (re.what ()));
                     zmsg_addstrf (reply, "%" PRIu32, code);
-                    std::string err = JSONIFY(re.what ());
-                    zmsg_addstr (reply, err.c_str ());
+                    zmsg_addstr (reply, UTF8::escape (re.what ()).c_str ());
                 }
 
                 int r = mlm_client_sendto (
@@ -443,6 +449,7 @@ fty_email_server (zsock_t *pipe, void* args)
     zstr_free (&test_reader_name);
     zstr_free (&sms_gateway);
     zstr_free (&gw_template);
+    zstr_free (&language);
     zpoller_destroy (&poller);
     mlm_client_destroy (&client);
     mlm_client_destroy (&test_client);
