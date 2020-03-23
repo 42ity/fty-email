@@ -5,8 +5,8 @@ server
     language = en_US                                #   Default language
 smtp
     server = mail.example.com                       #   SMTP server
-    port   = 25                                     #   SMTP server port
-    user   = ""                                     #   SMTP user name
+    port = 25                                       #   SMTP server port
+    user = ""                                       #   SMTP user name
     password = ""                                   #   SMTP user password
     from = joe.doe@mail.example.com                 #   From field
     encryption = NONE                               #   Encryption, (NONE|TLS|STARTTLS)
