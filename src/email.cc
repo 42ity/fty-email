@@ -110,6 +110,7 @@ std::string Smtp::createConfigFile() const
     if (r == -1)
         log_error ("write to %s failed: %s", filename, strerror (errno));
     close (handle);
+    log_debug("msmtp configuration:\n%s", line.c_str());
     return std::string(filename);
 }
 
@@ -120,9 +121,12 @@ void Smtp::deleteConfigFile(std::string &filename) const
 
 void Smtp::encryption(std::string enc)
 {
-    if( strcasecmp ("starttls", enc.c_str()) == 0) encryption (Encryption::STARTTLS);
-    if( strcasecmp ("tls", enc.c_str()) == 0) encryption (Encryption::TLS);
-    encryption (Encryption::NONE);
+    if( strcasecmp ("starttls", enc.c_str()) == 0)
+        encryption (Encryption::STARTTLS);
+    else if( strcasecmp ("tls", enc.c_str()) == 0)
+        encryption (Encryption::TLS);
+    else
+        encryption (Encryption::NONE);
 }
 
 void Smtp::sendmail(
