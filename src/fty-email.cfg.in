@@ -1,22 +1,23 @@
 #   fty-email configuration
 
-server
-    verbose = false                                 #   Do verbose logging of activity?
-    language = en_US                                #   Default language
-smtp
-    server = mail.example.com                       #   SMTP server
-    port   = 25                                     #   SMTP server port
-    user   = ""                                     #   SMTP user name
-    password = ""                                   #   SMTP user password
-    from = joe.doe@mail.example.com                 #   From field
-    encryption = NONE                               #   Encryption, (NONE|TLS|STARTTLS)
-    smsgateway = ""                                 #   SMS gateway
-    gwtemplate = "0#####@hyper.mobile"              #   SMS template
-    verify_ca = false                               #   Verify CA
-    use_auth = false                                #   Pass user/password to msmtp or not
-malamute
-    verbose = false                                 #   To setup verbose mlm_client
-    endpoint = ipc://@/malamute                     #   Malamute endpoint
-    address = fty-email                             #   Agent mailbox address
-log
-    config = /etc/fty/ftylog.cfg                    # configuration file for fty-common-logging
+server = ""
+    verbose = "false"
+    language = "en_US"
+smtp = ""
+    server = "mail.example.com"
+    port = "25"
+    user = ""
+    password = ""
+    from = "joe.doe@mail.example.com"
+    encryption = "NONE"
+    smsgateway = ""
+    gwtemplate = "0#####@hyper.mobile"
+    verify_ca = "false"
+    use_auth = "false"
+malamute = ""
+    verbose = "false"
+    endpoint = "ipc://@/malamute"
+    address = "fty-email"
+log = ""
+    config = "/etc/fty/ftylog.cfg"
+
