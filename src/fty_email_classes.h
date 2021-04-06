@@ -27,10 +27,10 @@
 #define FTY_EMAIL_CLASSES_H_INCLUDED
 
 //  Platform definitions, must come first
-#include "platform.h"
+// #include "platform.h"
 
 //  External API
-#include "../include/fty_email.h"
+#include "fty_email.h"
 
 //  Opaque class structures to allow forward references
 #ifndef EMAILCONFIGURATION_T_DEFINED
