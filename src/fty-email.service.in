@@ -21,7 +21,7 @@ EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 EnvironmentFile=-@sysconfdir@/default/fty
 EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="prefix=@prefix@"
-ExecStart=@prefix@/bin/fty-email --config @sysconfdir@/@PACKAGE@/fty-email.cfg
+ExecStart=@prefix@/bin/fty-email-server --config @sysconfdir@/@PACKAGE@/fty-email.cfg
 
 [Install]
 WantedBy=bios.target
