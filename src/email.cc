@@ -246,7 +246,8 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         zframe_destroy(&frame);
         zhash_autofree(headers);
 
-        for (char* value = (char*)zhash_first(headers); value != NULL; value = (char*)zhash_next(headers)) {
+        for (char* value = static_cast<char*>(zhash_first(headers)); value != NULL;
+             value       = static_cast<char*>(zhash_next(headers))) {
             const char* key = zhash_cursor(headers);
             mime.setHeader(key, value);
         }
@@ -295,7 +296,7 @@ std::string sms_email_address(const std::string& gw_template, const std::string&
             clean_phone_number.push_back(ch);
     }
 
-    ssize_t idx = clean_phone_number.size() - 1;
+    ssize_t idx = static_cast<ssize_t>(clean_phone_number.size() - 1);
     for (;;) {
         auto it = ret.find_last_of('#');
         if (it == std::string::npos)
@@ -303,7 +304,7 @@ std::string sms_email_address(const std::string& gw_template, const std::string&
         if (idx < 0)
             throw std::logic_error("Cannot apply number '" + phone_number + "' onto template '" + gw_template +
                                    "'. Not enough numbers in phone number");
-        ret[it] = clean_phone_number[idx];
+        ret[it] = clean_phone_number[static_cast<size_t>(idx)];
         idx--;
     }
 
@@ -354,7 +355,7 @@ SmtpError msmtp_stderr2code(const std::string& inp)
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
-void email_test(bool verbose)
+void email_test(bool /* verbose */)
 {
     printf(" * email: ");
 
@@ -407,7 +408,10 @@ void email_test(bool verbose)
                              "send mail (account default from config)") == SmtpError::DNSFailed);
 
     zhash_t* headers = zhash_new();
-    zhash_update(headers, "Foo", (void*)"bar");
+    {
+        std::string s("bar");
+        zhash_update(headers, "Foo", static_cast<void*>(&s));
+    }
     zmsg_t* email_msg = fty_email_encode("uuid", "to", "subject", headers, "body",
         (str_SELFTEST_DIR_RW + "/file1").c_str(), (str_SELFTEST_DIR_RW + "/file2.txt").c_str(), NULL);
     assert(email_msg);

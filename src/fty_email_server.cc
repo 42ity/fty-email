@@ -31,12 +31,12 @@
 #include "emailconfiguration.h"
 #include "fty_email.h"
 #include <algorithm>
+#include <fty/convert.h>
 #include <fty_common_macros.h>
 #include <fty_common_mlm.h>
 #include <fty_common_translation.h>
 #include <set>
 #include <tuple>
-
 static void s_notify(
     Smtp& smtp, const std::string& priority, const std::string& extname, const std::string& contact, fty_proto_t* alert)
 {
@@ -83,8 +83,8 @@ zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, 
     zmsg_addstr(msg, body);
 
     if (!headers) {
-        zhash_t*  headers = zhash_new();
-        zframe_t* frame   = zhash_pack(headers);
+        headers         = zhash_new();
+        zframe_t* frame = zhash_pack(headers);
         zmsg_append(msg, &frame);
         zhash_destroy(&headers);
     } else {
@@ -108,7 +108,7 @@ zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, 
 
 void fty_email_server(zsock_t* pipe, void* args)
 {
-    bool  sendmail_only    = (args && streq((char*)args, "sendmail-only"));
+    bool  sendmail_only    = (args && streq(static_cast<char*>(args), "sendmail-only"));
     char* name             = NULL;
     char* endpoint         = NULL;
     char* test_reader_name = NULL;
@@ -224,8 +224,8 @@ void fty_email_server(zsock_t* pipe, void* args)
                             name          = zsys_sprintf("%s-sendmail-only", oldname);
                             zstr_free(&oldname);
                         }
-                        uint32_t timeout = 1000;
-                        sscanf("%" SCNu32, zconfig_get(config, "malamute/timeout", "1000"), &timeout);
+                        uint32_t timeout = fty::convert<uint32_t>(zconfig_get(config, "malamute/timeout", "1000"));
+                        // sscanf("%" SCNu32, zconfig_get(config, "malamute/timeout", "1000"), &timeout);
 
                         log_debug("%s: mlm_client_connect (%s, %" PRIu32 ", %s)", name, endpoint, timeout, name);
                         int r = mlm_client_connect(client, endpoint, timeout, name);
@@ -409,7 +409,7 @@ void fty_email_server(zsock_t* pipe, void* args)
 }
 
 //  Self test of this class
-void fty_email_server_test(bool verbose)
+void fty_email_server_test(bool /* verbose */)
 {
     // Note: If your selftest reads SCMed fixture data, please keep it in
     // src/selftest-ro; if your test creates filesystem objects, please
@@ -454,7 +454,10 @@ void fty_email_server_test(bool verbose)
     {
         log_debug("Test #1");
         zhash_t* headers = zhash_new();
-        zhash_update(headers, "Foo", (void*)"bar");
+        {
+            std::string s("bar");
+            zhash_update(headers, "Foo", static_cast<void*>(&s));
+        }
         char* file1_name = zsys_sprintf("%s/file1", SELFTEST_DIR_RW);
         assert(file1_name != NULL);
         char* file2_name = zsys_sprintf("%s/file2.txt", SELFTEST_DIR_RW);
@@ -484,7 +487,7 @@ void fty_email_server_test(bool verbose)
         headers = zhash_unpack(frame);
         zframe_destroy(&frame);
 
-        assert(streq((char*)zhash_lookup(headers, "Foo"), "bar"));
+        assert(streq(static_cast<char*>(zhash_lookup(headers, "Foo")), "bar"));
         zhash_destroy(&headers);
 
         char* file1 = zmsg_popstr(email_msg);
@@ -510,7 +513,11 @@ void fty_email_server_test(bool verbose)
     static const char* endpoint = "inproc://fty-smtp-server-test";
 
     // malamute broker
-    zactor_t* server = zactor_new(mlm_server, (void*)"Malamute");
+    zactor_t* server;
+    {
+        std::string s("Malamute");
+        server = zactor_new(mlm_server, static_cast<void*>(&s));
+    }
     assert(server != NULL);
     zstr_sendx(server, "BIND", endpoint, NULL);
     log_info("malamute started");
@@ -543,12 +550,15 @@ void fty_email_server_test(bool verbose)
         const char* asset_name = "ASSET1";
         //      1. send alert message
         zlist_t* actions = zlist_new();
-        zlist_append(actions, (void*)"EMAIL");
+        {
+            std::string s("EMAIL");
+            zlist_append(actions, static_cast<void*>(&s));
+        }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
             "configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
-        zmsg_t* msg = fty_proto_encode_alert(
-            NULL, zclock_time() / 1000, 600, "NY_RULE", asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
+        zmsg_t* msg = fty_proto_encode_alert(NULL, fty::convert<uint64_t>(zclock_time() / 1000), 600, "NY_RULE",
+            asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
         assert(msg);
 
         zuuid_t* zuuid = zuuid_new();
@@ -579,7 +589,7 @@ void fty_email_server_test(bool verbose)
         zmsg_print(msg);
 
         //      3. compare the email with expected output
-        int   fr_number = zmsg_size(msg);
+        int   fr_number = fty::convert<int>(zmsg_size(msg));
         char* body      = NULL;
         while (fr_number > 0) {
             zstr_free(&body);
@@ -625,12 +635,15 @@ void fty_email_server_test(bool verbose)
 
         //      1. send alert message
         zlist_t* actions = zlist_new();
-        zlist_append(actions, (void*)"EMAIL");
+        {
+            std::string s("EMAIL");
+            zlist_append(actions, static_cast<void*>(&s));
+        }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
             "configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
-        zmsg_t* msg = fty_proto_encode_alert(
-            NULL, time(NULL), 600, "NY_RULE", asset_name1, "ACTIVE", "CRITICAL", description.c_str(), actions);
+        zmsg_t* msg = fty_proto_encode_alert(NULL, fty::convert<uint64_t>(time(NULL)), 600, "NY_RULE", asset_name1,
+            "ACTIVE", "CRITICAL", description.c_str(), actions);
         assert(msg);
 
         zuuid_t* zuuid = zuuid_new();
@@ -670,12 +683,15 @@ void fty_email_server_test(bool verbose)
         //      1. send alert message
         const char* asset_name = "ASSET3";
         zlist_t*    actions    = zlist_new();
-        zlist_append(actions, (void*)"EMAIL");
+        {
+            std::string s("EMAIL");
+            zlist_append(actions, static_cast<void*>(&s));
+        }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
             "configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
-        zmsg_t* msg = fty_proto_encode_alert(
-            NULL, time(NULL), 600, "NY_RULE", asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
+        zmsg_t* msg = fty_proto_encode_alert(NULL, fty::convert<uint64_t>(time(NULL)), 600, "NY_RULE", asset_name,
+            "ACTIVE", "CRITICAL", description.c_str(), actions);
         assert(msg);
 
         zuuid_t* zuuid = zuuid_new();
@@ -713,12 +729,15 @@ void fty_email_server_test(bool verbose)
         //      2. send alert message
         const char* asset_name = "ASSET3";
         zlist_t*    actions    = zlist_new();
-        zlist_append(actions, (void*)"EMAIL");
+        {
+            std::string s("EMAIL");
+            zlist_append(actions, static_cast<void*>(&s));
+        }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
             "configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
-        zmsg_t* msg = fty_proto_encode_alert(
-            NULL, time(NULL), 600, "NY_RULE", asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
+        zmsg_t* msg = fty_proto_encode_alert(NULL, fty::convert<uint64_t>(time(NULL)), 600, "NY_RULE", asset_name,
+            "ACTIVE", "CRITICAL", description.c_str(), actions);
         assert(msg);
 
         zuuid_t* zuuid = zuuid_new();
@@ -758,12 +777,15 @@ void fty_email_server_test(bool verbose)
         const char* asset_name = "ASSET1";
         //      1. send alert message
         zlist_t* actions = zlist_new();
-        zlist_append(actions, (void*)"SMS");
+        {
+            std::string s("SMS");
+            zlist_append(actions, static_cast<void*>(&s));
+        }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
             "configured.\", \"variables\": { \"var1\": \"ASSET1\" } }");
-        zmsg_t* msg = fty_proto_encode_alert(
-            NULL, zclock_time() / 1000, 600, "NY_RULE", asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
+        zmsg_t* msg = fty_proto_encode_alert(NULL, fty::convert<uint64_t>(zclock_time() / 1000), 600, "NY_RULE",
+            asset_name, "ACTIVE", "CRITICAL", description.c_str(), actions);
         assert(msg);
 
         zuuid_t* zuuid = zuuid_new();
@@ -838,7 +860,11 @@ void fty_email_server_test(bool verbose)
     // clean up after the test
 
     // smtp server send mail only
-    zactor_t* send_mail_only_server = zactor_new(fty_email_server, (void*)"sendmail-only");
+    zactor_t* send_mail_only_server;
+    {
+        std::string s("sendmail-only");
+        send_mail_only_server = zactor_new(fty_email_server, static_cast<void*>(&s));
+    }
     assert(send_mail_only_server != NULL);
 
     zactor_destroy(&send_mail_only_server);

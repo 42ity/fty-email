@@ -182,7 +182,7 @@ std::string getIpAddr()
         }
         // Check IP4 address
         if (ifa->ifa_addr->sa_family == AF_INET) {
-            tmpAddrPtr = &((struct sockaddr_in*)ifa->ifa_addr)->sin_addr;
+            tmpAddrPtr = &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr))->sin_addr;
             char addressBuffer[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
             if (strcmp(ifa->ifa_name, "eth0") == 0 || strcmp(ifa->ifa_name, "LAN1") == 0) {
@@ -201,7 +201,7 @@ std::string getIpAddr()
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
-void emailconfiguration_test(bool verbose)
+void emailconfiguration_test(bool /* verbose */)
 {
     printf(" * emailconfiguration: ");
     // TODO

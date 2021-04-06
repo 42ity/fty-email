@@ -45,6 +45,7 @@ etn_target(exe ${PROJECT_NAME}-server
         fty_common_translation
         mlm
         magic
+        fty-utils
 )
 
 #systemd-tmpfiles
