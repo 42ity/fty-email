@@ -27,8 +27,8 @@
     =========================================================================
 */
 
-#include "fty_email_classes.h"
-
+#include "email.h"
+#include "emailconfiguration.h"
 
 //  -------------------------------------------------------------------------
 //  Run all private classes tests.

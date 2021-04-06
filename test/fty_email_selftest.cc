@@ -27,7 +27,7 @@
     =========================================================================
 */
 
-#include "fty_email_classes.h"
+#include "fty_email_server.h"
 
 typedef struct {
     const char *testname;           // test name, can be called from command line this way

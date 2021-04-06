@@ -55,37 +55,43 @@ etn_configure_file(
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/systemd/system/"
 )
 
+etn_configure_file(
+    ${PROJECT_SOURCE_DIR}/src/conf/fty-email.cfg.in
+    TARGET      ${PROJECT_NAME}-server
+    DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/${PROJECT_NAME}
+)
+
 ##############################################################################################################
 
-#if(BUILD_TESTING)
-#    enable_testing()
-#
-#    # Create a target for the tests
-#    etn_test(${PROJECT_NAME}-test
-#        SOURCES
-#            src/fty_discovery_server.cc
-#            test/fty_discovery_selftest.cc
-#            test/fty_discovery_private_selftest.cc
-#        INCLUDE_DIRS
-#            src
-#        USES
-#            ${PROJECT_NAME}-static
-#            cidr
-#            czmq
-#            cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-#            fty-asset-accessor
-#            fty_common
-#            fty_common_db
-#            fty_common_logging
-#            fty_common_nut
-#            fty_common_socket
-#            fty_proto
-#            fty_security_wallet
-#            fty-utils
-#            mlm
-#            tntdb
-#    )
-#    
-#endif()
+if(BUILD_TESTING)
+    enable_testing()
+
+    # Create a target for the tests
+    etn_test(${PROJECT_NAME}-test
+        SOURCES
+            test/fty_email_private_selftest.cc
+            test/fty_email_selftest.cc
+            src/fty_email_server.cc
+        CONFIGS
+            test/conf/smtp-test-10.cfg
+            test/conf/test_en_US.json
+        INCLUDE_DIRS
+            src
+        USES
+            ${PROJECT_NAME}-static
+            czmq
+            cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+            fty_common
+            fty_common_logging
+            fty_proto
+            fty_common_mlm
+            fty_common_translation
+            mlm
+            magic
+            fty-utils
+    )
+
+    
+endif()
 
 ##############################################################################################################
