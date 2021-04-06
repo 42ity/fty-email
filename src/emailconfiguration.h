@@ -19,21 +19,17 @@
     =========================================================================
 */
 
-#ifndef EMAILCONFIGURATION_H_INCLUDED
-#define EMAILCONFIGURATION_H_INCLUDED
+#pragma once
 
 #include <string>
+#include <ftyproto.h>
 
-std::string
-generate_body (fty_proto_t *alert, const std::string& priority, const std::string& extname);
+std::string generate_body(fty_proto_t* alert, const std::string& priority, const std::string& extname);
 
-std::string
-generate_subject (fty_proto_t *alert, const std::string& priority, const std::string& extname);
+std::string generate_subject(fty_proto_t* alert, const std::string& priority, const std::string& extname);
 
-std::string getIpAddr ();
+std::string getIpAddr();
 
-void
-emailconfiguration_test (bool verbose);
+void emailconfiguration_test(bool verbose);
 
-#endif // EMAILCONFIGURATION_H_INCLUDED
-
+// EMAILCONFIGURATION_H_INCLUDED

@@ -38,21 +38,24 @@ Example:
     }
 
 */
-#ifndef EMAIL_H_INCLUDED
-#define EMAIL_H_INCLUDED
+#pragma once
 
+#include <magic.h>
+#include <czmq.h>
+
+#include <fty_common_mlm_subprocess.h>
+#include <functional>
 
 #include <string>
 #include <vector>
-#include <functional>
-#include <fty_common_mlm_subprocess.h>
 
 /**
  * \class security
  *
  * Security of SMTP connection
  */
-enum class Encryption {
+enum class Encryption
+{
     NONE,
     TLS,
     STARTTLS
@@ -74,18 +77,19 @@ enum class Encryption {
 10: if the reason is unknown
 */
 
-enum class SmtpError {
-    Succeeded = 0,
-    NoRecipient = 1,
-    ServerUnreachable = 2,
-    DNSFailed = 3,
+enum class SmtpError
+{
+    Succeeded              = 0,
+    NoRecipient            = 1,
+    ServerUnreachable      = 2,
+    DNSFailed              = 3,
     AuthMethodNotSupported = 4,
-    AuthFailed = 5,
-    SSLNotSupported = 6,
-    UnknownCA = 7,
-    SSLRequired = 8,
-    NoSenderAddress = 9,
-    Unknown = 10
+    AuthFailed             = 5,
+    SSLNotSupported        = 6,
+    UnknownCA              = 7,
+    SSLRequired            = 8,
+    NoSenderAddress        = 9,
+    Unknown                = 10
 };
 
 /**
@@ -100,131 +104,147 @@ enum class SmtpError {
  */
 class Smtp
 {
-    public:
-        /**
-         * \brief Creates SMTP instance
-         *
-         */
-        explicit Smtp();
+public:
+    /**
+     * \brief Creates SMTP instance
+     *
+     */
+    explicit Smtp();
 
-        ~Smtp ();
+    ~Smtp();
 
-        /** \brief set the SMTP server address */
-        void host (const std::string& host) { _host = host; };
+    /** \brief set the SMTP server address */
+    void host(const std::string& host)
+    {
+        _host = host;
+    };
 
-        /** \brief set the SMTP server port. Default is 25.*/
-        void port (const std::string& port) { _port = port; };
+    /** \brief set the SMTP server port. Default is 25.*/
+    void port(const std::string& port)
+    {
+        _port = port;
+    };
 
-        /** \brief set the "mail from" address */
-        void from (const std::string& from) { _from = from; };
+    /** \brief set the "mail from" address */
+    void from(const std::string& from)
+    {
+        _from = from;
+    };
 
-        /** \brief set username for smtp authentication */
-        void username (const std::string& username) { _username = username; };
+    /** \brief set username for smtp authentication */
+    void username(const std::string& username)
+    {
+        _username = username;
+    };
 
-        /** \brief set password for smtp authentication */
-        void password (const std::string& password) { _password = password; };
+    /** \brief set password for smtp authentication */
+    void password(const std::string& password)
+    {
+        _password = password;
+    };
 
-        /** \brief set the encryption for SMTP communication (NONE|TLS|STARTTLS) */
-        void encryption (std::string enc);
-        void encryption (Encryption enc) { _encryption = enc; };
+    /** \brief set the encryption for SMTP communication (NONE|TLS|STARTTLS) */
+    void encryption(std::string enc);
+    void encryption(Encryption enc)
+    {
+        _encryption = enc;
+    };
 
-        /** \brief turn on or of the CA verification */
-        void verify_ca (bool verify) { _verify_ca = verify; }
+    /** \brief turn on or of the CA verification */
+    void verify_ca(bool verify)
+    {
+        _verify_ca = verify;
+    }
 
-        /**
-         * \brief set alternative path for msmtp
-         *
-         * \param path  path to msmtp binary to be called
-         *
-         */
-        void msmtp_path (const std::string& msmtp_path) { _msmtp = msmtp_path; };
+    /**
+     * \brief set alternative path for msmtp
+     *
+     * \param path  path to msmtp binary to be called
+     *
+     */
+    void msmtp_path(const std::string& msmtp_path)
+    {
+        _msmtp = msmtp_path;
+    };
 
-        /**
-         * \brief set sendmail testing function
-         *
-         * \param function to be used in sendmail instead of msmtp binary
-         * This is for testing purposes of protocol only!
-         */
-        void sendmail_set_test_fn (std::function <void(const std::string&)> fn) {
-            _has_fn = true;
-            _fn = fn;
-        }
+    /**
+     * \brief set sendmail testing function
+     *
+     * \param function to be used in sendmail instead of msmtp binary
+     * This is for testing purposes of protocol only!
+     */
+    void sendmail_set_test_fn(std::function<void(const std::string&)> fn)
+    {
+        _has_fn = true;
+        _fn     = fn;
+    }
 
-        /**
-         * \brief send the email
-         *
-         * Technically this put email to msmtp's outgoing queue
-         * \param to        email header To: multiple recipient in vector
-         * \param subject   email header Subject:
-         * \param body      email body
-         *
-         * \throws std::runtime_error for msmtp invocation errors
-         */
-        void sendmail(
-                const std::vector<std::string> &to,
-                const std::string& subject,
-                const std::string& body) const;
+    /**
+     * \brief send the email
+     *
+     * Technically this put email to msmtp's outgoing queue
+     * \param to        email header To: multiple recipient in vector
+     * \param subject   email header Subject:
+     * \param body      email body
+     *
+     * \throws std::runtime_error for msmtp invocation errors
+     */
+    void sendmail(const std::vector<std::string>& to, const std::string& subject, const std::string& body) const;
 
-        /**
-         * \brief send the email
-         *
-         * Technically this put email to msmtp's outgoing queue
-         * \param to        email header To: single recipient
-         * \param subject   email header Subject:
-         * \param body      email body
-         *
-         * \throws std::runtime_error for msmtp invocation errors
-         */
-        void sendmail(
-                const std::string& to,
-                const std::string& subject,
-                const std::string& body) const;
+    /**
+     * \brief send the email
+     *
+     * Technically this put email to msmtp's outgoing queue
+     * \param to        email header To: single recipient
+     * \param subject   email header Subject:
+     * \param body      email body
+     *
+     * \throws std::runtime_error for msmtp invocation errors
+     */
+    void sendmail(const std::string& to, const std::string& subject, const std::string& body) const;
 
-        /**
-         * \brief send the email
-         *
-         * Technically this put email to msmtp's outgoing queue
-         * \param data  email DATA (To/Subject are deduced
-         *              from the fields in body, so body must be properly
-         *              formatted email message).
-         *
-         * \throws std::runtime_error for msmtp invocation errors
-         */
-        void sendmail(
-                const std::string& data) const;
+    /**
+     * \brief send the email
+     *
+     * Technically this put email to msmtp's outgoing queue
+     * \param data  email DATA (To/Subject are deduced
+     *              from the fields in body, so body must be properly
+     *              formatted email message).
+     *
+     * \throws std::runtime_error for msmtp invocation errors
+     */
+    void sendmail(const std::string& data) const;
 
-        /**
-         * \brief convert zmq message to email string
-         *
-         * Function creates a multipart message, which can be sent
-         * Format of message is in bios_smtp_server
-         *
-         */
-        std::string
-            msg2email (zmsg_t **msg_p) const;
+    /**
+     * \brief convert zmq message to email string
+     *
+     * Function creates a multipart message, which can be sent
+     * Format of message is in bios_smtp_server
+     *
+     */
+    std::string msg2email(zmsg_t** msg_p) const;
 
-    protected:
+protected:
+    /**
+     * \brief create msmtp config file
+     */
+    std::string createConfigFile() const;
+    /**
+     * \brief delete msmtp config file
+     */
+    void deleteConfigFile(std::string& filename) const;
 
-        /**
-         * \brief create msmtp config file
-         */
-        std::string createConfigFile() const;
-        /**
-         * \brief delete msmtp config file
-         */
-        void deleteConfigFile(std::string &filename) const;
-
-        std::string _host;
-        std::string _port;
-        std::string _from;
-        Encryption _encryption;
-        std::string _username;
-        std::string _password;
-        std::string _msmtp;
-        bool _has_fn;
-        bool _verify_ca;
-        std::function <void(const std::string&)> _fn;
-        magic_t _magic;
+    std::string                             _host;
+    std::string                             _port;
+    std::string                             _from;
+    Encryption                              _encryption;
+    std::string                             _username;
+    std::string                             _password;
+    std::string                             _msmtp;
+    bool                                    _has_fn;
+    bool                                    _verify_ca;
+    std::function<void(const std::string&)> _fn;
+    magic_t                                 _magic;
 };
 
 /**
@@ -252,18 +272,11 @@ class Smtp
  *
  */
 
-std::string
-    sms_email_address (
-        const std::string& gw_template,
-        const std::string& phone_number);
+std::string sms_email_address(const std::string& gw_template, const std::string& phone_number);
 
 /**
  * Convert msmtp stderr to error code
  */
-SmtpError
-    msmtp_stderr2code (
-        const std::string &inp);
+SmtpError msmtp_stderr2code(const std::string& inp);
 
-void email_test (bool verbose);
-
-#endif
+void email_test(bool verbose);

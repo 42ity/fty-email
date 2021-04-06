@@ -19,13 +19,8 @@
     =========================================================================
 */
 
-#ifndef FTY_EMAIL_SERVER_H_INCLUDED
-#define FTY_EMAIL_SERVER_H_INCLUDED
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#pragma once
+#include <czmq.h>
 //  @interface
 
 //  Main actor sending emails (and sms2email)
@@ -81,12 +76,10 @@ extern "C" {
 //
 //  args:
 //      "sendmail-only"      : ignore consumer/ part, connect as $(malamute/address)-sendmail-only
-FTY_EMAIL_EXPORT void
-   fty_email_server (zsock_t *pipe, void* args);
+void fty_email_server(zsock_t* pipe, void* args);
 
 //  Self test of this class
-FTY_EMAIL_EXPORT void
-    fty_email_server_test (bool verbose);
+void fty_email_server_test(bool verbose);
 
 // encode email message to zmsg_t
 //  uuid - uuid of the message
@@ -96,19 +89,7 @@ FTY_EMAIL_EXPORT void
 //  body - email body
 //  ... list of files to attach (files with .txt suffix will be added as text files, otherwise binary)
 //  parameter list must be closed by NULL
-FTY_EMAIL_EXPORT zmsg_t *
-    fty_email_encode (
-        const char *uuid,
-        const char *to,
-        const char *subject,
-        zhash_t *headers,
-        const char *body,
-        ...);
+zmsg_t* fty_email_encode(
+    const char* uuid, const char* to, const char* subject, zhash_t* headers, const char* body, ...);
 
 //  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
