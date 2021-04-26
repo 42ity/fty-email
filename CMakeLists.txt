@@ -93,6 +93,13 @@ etn_test_target(${PROJECT_NAME}
         src
 )
 
+etn_test_target(fty-sendmail
+    SOURCES
+        test/main_test.cpp
+    PUBLIC_INCLUDE_DIR
+        src
+)
+
 # if(BUILD_TESTING)
 #     enable_testing()
 
