@@ -26,44 +26,28 @@ etn_target(static ${PROJECT_NAME}-static
         fty_common_translation
         mlm
         magic
+        fty-utils
     PRIVATE
 )
 
 ##############################################################################################################
+
 etn_target(exe ${PROJECT_NAME}
     SOURCES
         src/fty_email.cc
     USES
         ${PROJECT_NAME}-static
-        czmq
-        cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty_common
-        fty_common_logging
-        fty_proto
-        fty_common_mlm
-        fty_common_translation
-        mlm
-        magic
-        fty-utils
 )
-##############################################################################################################
+
 etn_target(exe fty-sendmail
     SOURCES
         src/fty_sendmail.cc
     USES
         ${PROJECT_NAME}-static
-        czmq
-        cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty_common
-        fty_common_logging
-        fty_proto
-        fty_common_mlm
-        fty_common_translation
-        mlm
-        magic
-        fty-utils
 )
+
 ##############################################################################################################
+
 # Agent config
 etn_configure_file(
     src/conf/${PROJECT_NAME}.cfg.in
@@ -80,9 +64,15 @@ etn_configure_file(
 )
 
 # .conf etc/
-install(FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR})
+install(
+    FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf 
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
+)
 
-install(FILES fty-device-scan DESTINATION ${CMAKE_INSTALL_BINDIR}/)
+install(
+    FILES fty-device-scan 
+    DESTINATION ${CMAKE_INSTALL_BINDIR}/
+)
 
 ##############################################################################################################
 
