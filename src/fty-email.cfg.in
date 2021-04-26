@@ -1,9 +1,9 @@
 #   fty-email configuration
 
-server = ""
+server
     verbose = "false"
     language = "en_US"
-smtp = ""
+smtp
     server = "mail.example.com"
     port = "25"
     user = ""
@@ -14,10 +14,10 @@ smtp = ""
     gwtemplate = "0#####@hyper.mobile"
     verify_ca = "false"
     use_auth = "false"
-malamute = ""
+malamute
     verbose = "false"
     endpoint = "ipc://@/malamute"
     address = "fty-email"
-log = ""
-    config = "/etc/fty/ftylog.cfg"
+log
+    config = "/etc/fty-email/fty-email-log.cfg"
 

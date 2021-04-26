@@ -2,5 +2,6 @@ usr/bin/fty-email
 usr/bin/fty-sendmail
 usr/bin/fty-device-scan
 etc/fty-email/fty-email.cfg
+etc/fty-email/fty-email-log.cfg
 lib/systemd/system/fty-email.service
 

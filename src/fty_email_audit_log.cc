@@ -1,7 +1,7 @@
 /*  =========================================================================
-    fty-email - Email transport for 42ity (based on msmtp)
+    fty_email_audit_log - Manage audit log
 
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,17 +19,38 @@
     =========================================================================
 */
 
-#ifndef FTY_EMAIL_H_H_INCLUDED
-#define FTY_EMAIL_H_H_INCLUDED
+/*
+@header
+    fty_email_audit_log - Manage alerts audit log
+@discuss
+@end
+*/
 
-//  Include the project library file
-#include "fty_email_library.h"
+#include "fty_email_audit_log.h"
 
-//  Add your own public definitions here, if you need them
-#define FTY_EMAIL_ADDRESS               "fty-email"
-#define FTY_EMAIL_ADDRESS_SENDMAIL_ONLY "fty-email-sendmail-only"
-#define FTY_EMAIL_ENDPOINT              "ipc://@/malamute"
-#define FTY_EMAIL_CONFIG_FILE           "/etc/fty-email/fty-email.cfg"
-#define DEFAULT_LOG_CONFIG              "/etc/fty-email/fty-email-log.cfg"
-#define DEFAULT_LANGUAGE                "en_US"
-#endif
+Ftylog *EmailAuditLogManager::_emailauditlog = nullptr;
+
+//  init audit logger
+void EmailAuditLogManager::init (const char* configLogFile)
+{
+    if (!_emailauditlog)
+    {
+        _emailauditlog = ftylog_new ("email-audit", configLogFile);
+    }
+}
+
+//  deinit audit logger
+void EmailAuditLogManager::deinit ()
+{
+    if (_emailauditlog)
+    {
+        ftylog_delete(_emailauditlog);
+        _emailauditlog = nullptr;
+    }
+}
+
+//  return alerts audit logger
+Ftylog* EmailAuditLogManager::getInstance ()
+{
+    return _emailauditlog;
+}

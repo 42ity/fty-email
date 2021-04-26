@@ -4,6 +4,7 @@
 ################################################################################
 include_HEADERS = \
     fty_email.h \
+    fty_email_audit_log.h \
     fty_email_server.h \
     fty_email_library.h
 
