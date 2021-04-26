@@ -15,7 +15,7 @@ etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/email.cc
         src/emailconfiguration.cc
-        src/fty_sendmail.cc
+        src/fty_email_server.cc
     USES
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
@@ -32,7 +32,6 @@ etn_target(static ${PROJECT_NAME}-static
 ##############################################################################################################
 etn_target(exe ${PROJECT_NAME}
     SOURCES
-        src/fty_email_server.cc
         src/fty_email.cc
     USES
         ${PROJECT_NAME}-static
@@ -47,9 +46,26 @@ etn_target(exe ${PROJECT_NAME}
         magic
         fty-utils
 )
+##############################################################################################################
+etn_target(exe fty-sendmail
+    SOURCES
+        src/fty_sendmail.cc
+    USES
+        ${PROJECT_NAME}-static
+        czmq
+        cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+        fty_common
+        fty_common_logging
+        fty_proto
+        fty_common_mlm
+        fty_common_translation
+        mlm
+        magic
+        fty-utils
+)
+##############################################################################################################
 
 #systemd-tmpfiles
-
 etn_configure_file(
     src/conf/${PROJECT_NAME}.service.in
 
@@ -62,6 +78,8 @@ etn_configure_file(
     TARGET      ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
 )
+
+install(FILES fty-device-scan DESTINATION ${CMAKE_INSTALL_BINDIR}/)
 
 ##############################################################################################################
 
