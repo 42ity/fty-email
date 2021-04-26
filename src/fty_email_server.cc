@@ -30,6 +30,7 @@
 #include "email.h"
 #include "emailconfiguration.h"
 #include "fty_email.h"
+#include "fty_email_audit_log.h"
 #include <algorithm>
 #include <fty/convert.h>
 #include <fty_common_macros.h>
@@ -334,11 +335,13 @@ void fty_email_server(zsock_t* pipe, void* args)
                         ZstrGuard   bodyTemp(zmsg_popstr(zmessage));
                         body += bodyTemp.get();
                         log_debug("%s:\tsmtp.sendmail (%s)", name, body.c_str());
+                        log_debug_email_audit("%s: Send email: %s", name, body.c_str());
                         smtp.sendmail(body);
                     } else {
                         zmsg_print(zmessage);
                         auto mail = smtp.msg2email(&zmessage);
                         log_debug(mail.c_str());
+                        log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
                         smtp.sendmail(mail);
                     }
                     zmsg_addstr(reply, "0");
@@ -346,12 +349,15 @@ void fty_email_server(zsock_t* pipe, void* args)
                     sent_ok = true;
                 } catch (const std::runtime_error& re) {
                     log_debug("%s:\tgot std::runtime_error, e.what ()=%s", name, re.what());
+                    log_error_email_audit("%s: Send email error: %s", name, re.what ());
                     sent_ok       = false;
                     uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
                     zmsg_addstrf(reply, "%" PRIu32, code);
                     zmsg_addstr(reply, UTF8::escape(re.what()).c_str());
                 }
-
+                if (sent_ok) {
+                    log_info_email_audit("%s: Send email ok", name);
+                }
                 int r = mlm_client_sendto(
                     client, mlm_client_sender(client), sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR", NULL, 1000, &reply);
                 if (r == -1)
@@ -363,21 +369,33 @@ void fty_email_server(zsock_t* pipe, void* args)
                 fty_proto_t* alert             = fty_proto_decode(&zmessage);
                 std::string  gateway           = gw_template == NULL ? "" : gw_template;
                 std::string  converted_contact = contact == NULL ? "" : contact;
-
+                std::string audit_contact = converted_contact;
+                bool sent_ok = false;
                 try {
                     if (topic == "SENDSMS_ALERT") {
                         log_debug("gw_template = %s", gw_template);
                         log_debug("contact = %s", contact);
                         std::string _contact = sms_email_address(gateway, converted_contact);
+                        audit_contact = _contact;
                         s_notify(smtp, priority, extname, _contact, alert);
                     } else {
                         s_notify(smtp, priority, extname, converted_contact, alert);
                     }
                     zmsg_addstr(reply, "OK");
+                    sent_ok = true;
                 } catch (const std::exception& re) {
                     log_error("Sending of e-mail/SMS alert failed : %s", re.what());
+                    if (!audit_contact.empty()) {
+                        // Workaround for unwanted logs: log audit only if contact is not empty
+                        log_error_email_audit("%s: Send email/SMS alert error (gateway=%s contact=%s extname=%s): %s",
+                            name, gateway.c_str(), audit_contact.c_str(), extname ? extname : "", re.what ());
+                    }
                     zmsg_addstr(reply, "ERROR");
                     zmsg_addstr(reply, re.what());
+                }
+                if (sent_ok) {
+                    log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s)",
+                        name, gateway.c_str(), audit_contact.c_str(), extname ? extname : "");
                 }
                 int r = mlm_client_sendto(client, mlm_client_sender(client),
                     (topic == "SENDMAIL_ALERT") ? "SENDMAIL_ALERT" : "SENDSMS_ALERT", NULL, 1000, &reply);
