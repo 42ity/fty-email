@@ -41,7 +41,14 @@ Build-Depends: debhelper (>= 9),
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
-Package: fty-email
+Package: libfty-email1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: fty-email shared library
+ This package contains shared library for fty-email:
+ email transport for 42ity (based on msmtp)
+
+Package: libfty-email-dev
 Architecture: any
 Section: libdevel
 Depends:
@@ -59,5 +66,12 @@ Depends:
     libfty-email1 (= ${binary:Version})
 Description: fty-email development tools
  This package contains development files for fty-email:
+ email transport for 42ity (based on msmtp)
+
+Package: fty-email
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+Description: runnable binaries from fty-email
+ Main package for fty-email:
  email transport for 42ity (based on msmtp)
 

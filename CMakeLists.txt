@@ -30,7 +30,7 @@ etn_target(static ${PROJECT_NAME}-static
 )
 
 ##############################################################################################################
-etn_target(exe ${PROJECT_NAME}-server
+etn_target(exe ${PROJECT_NAME}
     SOURCES
         src/fty_email_server.cc
         src/fty_email.cc
@@ -49,49 +49,58 @@ etn_target(exe ${PROJECT_NAME}-server
 )
 
 #systemd-tmpfiles
+
 etn_configure_file(
-    ${PROJECT_SOURCE_DIR}/src/fty-email.service.in
-    TARGET      ${PROJECT_NAME}-server
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/systemd/system/"
+    src/conf/${PROJECT_NAME}.service.in
+
+    TARGET      ${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/
 )
 
 etn_configure_file(
-    ${PROJECT_SOURCE_DIR}/src/conf/fty-email.cfg.in
-    TARGET      ${PROJECT_NAME}-server
-    DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/${PROJECT_NAME}
+    ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf.in
+    TARGET      ${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
 )
 
 ##############################################################################################################
 
-if(BUILD_TESTING)
-    enable_testing()
+etn_test_target(${PROJECT_NAME}
+    SOURCES
+        test/main_test.cpp
+    PUBLIC_INCLUDE_DIR
+        src
+)
 
-    # Create a target for the tests
-    etn_test(${PROJECT_NAME}-test
-        SOURCES
-            test/fty_email_private_selftest.cc
-            test/fty_email_selftest.cc
-            src/fty_email_server.cc
-        CONFIGS
-            test/conf/smtp-test-10.cfg
-            test/conf/test_en_US.json
-        INCLUDE_DIRS
-            src
-        USES
-            ${PROJECT_NAME}-static
-            czmq
-            cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-            fty_common
-            fty_common_logging
-            fty_proto
-            fty_common_mlm
-            fty_common_translation
-            mlm
-            magic
-            fty-utils
-    )
+# if(BUILD_TESTING)
+#     enable_testing()
+
+#     # Create a target for the tests
+#     etn_test(${PROJECT_NAME}-test
+#         SOURCES
+#             test/fty_email_private_selftest.cc
+#             test/fty_email_selftest.cc
+#             src/fty_email_server.cc
+#         CONFIGS
+#             test/conf/smtp-test-10.cfg
+#             test/conf/test_en_US.json
+#         INCLUDE_DIRS
+#             src
+#         USES
+#             ${PROJECT_NAME}-static
+#             czmq
+#             cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+#             fty_common
+#             fty_common_logging
+#             fty_proto
+#             fty_common_mlm
+#             fty_common_translation
+#             mlm
+#             magic
+#             fty-utils
+#     )
 
     
-endif()
+# endif()
 
 ##############################################################################################################
