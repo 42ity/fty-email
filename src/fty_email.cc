@@ -27,6 +27,7 @@
 */
 
 #include "fty_email.h"
+#include "fty_email_audit_log.h"
 #include "fty_email_server.h"
 #include <fty/convert.h>
 #include <fty_common_translation.h>
@@ -176,7 +177,7 @@ int main(int argc, char** argv)
         zconfig_put(config, "malamute/endpoint", FTY_EMAIL_ENDPOINT);
         zconfig_put(config, "malamute/address", FTY_EMAIL_ADDRESS);
         zconfig_put(config, "log/config", DEFAULT_LOG_CONFIG);
-        
+
         strcpy(log_config, DEFAULT_LOG_CONFIG);
         zconfig_print(config);
 
@@ -198,11 +199,15 @@ int main(int argc, char** argv)
                 log_warning("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
         }
     }
-    if (language)
-        log_config = zconfig_get(config, "log/config", DEFAULT_LOG_CONFIG);
-    if (log_config)
+    if (language) {
+        log_config = zconfig_get (config, "log/config", DEFAULT_LOG_CONFIG);
+    }
+    if (log_config) {
         ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
 
+        // initialize log for auditability
+        EmailAuditLogManager::init(log_config);
+    }
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
@@ -239,5 +244,8 @@ int main(int argc, char** argv)
     zstr_free(&translation_path);
     zconfig_destroy(&config);
     zstr_free(&config_file);
+
+    // release audit context
+    EmailAuditLogManager::deinit();
     return 0;
 }
