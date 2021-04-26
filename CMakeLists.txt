@@ -64,6 +64,12 @@ etn_target(exe fty-sendmail
         fty-utils
 )
 ##############################################################################################################
+# Agent config
+etn_configure_file(
+    src/conf/${PROJECT_NAME}.cfg.in
+    TARGET      ${PROJECT_NAME}
+    DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME}
+)
 
 #systemd-tmpfiles
 etn_configure_file(
@@ -73,11 +79,8 @@ etn_configure_file(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/
 )
 
-etn_configure_file(
-    ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf.in
-    TARGET      ${PROJECT_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
-)
+# .conf etc/
+install(FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR})
 
 install(FILES fty-device-scan DESTINATION ${CMAKE_INSTALL_BINDIR}/)
 
