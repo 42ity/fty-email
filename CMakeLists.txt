@@ -15,6 +15,7 @@ etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/email.cc
         src/emailconfiguration.cc
+        src/fty_email_audit_log.cc
         src/fty_email_server.cc
     USES
         czmq
@@ -54,6 +55,9 @@ etn_configure_file(
     TARGET      ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME}
 )
+
+# Agent log config
+install(FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}-log.cfg DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME})
 
 #systemd-tmpfiles
 etn_configure_file(
