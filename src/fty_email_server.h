@@ -78,8 +78,8 @@
 //      "sendmail-only"      : ignore consumer/ part, connect as $(malamute/address)-sendmail-only
 void fty_email_server(zsock_t* pipe, void* args);
 
-//  Self test of this class
-void fty_email_server_test(bool verbose);
+// //  Self test of this class
+// void fty_email_server_test(bool verbose);
 
 // encode email message to zmsg_t
 //  uuid - uuid of the message

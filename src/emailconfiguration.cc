@@ -197,16 +197,3 @@ std::string getIpAddr()
 
     return ipAddr;
 }
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void emailconfiguration_test(bool /* verbose */)
-{
-    printf(" * emailconfiguration: ");
-    // TODO
-    //  * replace_tokens
-    //  * generate_subject
-    //  * generate_body
-    printf("OK\n");
-}

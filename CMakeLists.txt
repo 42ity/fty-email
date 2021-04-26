@@ -78,14 +78,22 @@ install(
 
 etn_test_target(${PROJECT_NAME}
     SOURCES
-        test/main_test.cpp
+        test/main.cpp
+        test/email.cpp
+        test/emailconfiguration.cpp
+        test/fty_email_server.cpp
+        src/fty_email_server.cpp
+    INCLUDE_DIRS
+        test
+        # test/conf/smtp-test-10.cfg
+        # test/conf/test_en_US.json
     PUBLIC_INCLUDE_DIR
         src
 )
 
 etn_test_target(fty-sendmail
     SOURCES
-        test/main_test.cpp
+        test/main.cpp
     PUBLIC_INCLUDE_DIR
         src
 )
