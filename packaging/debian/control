@@ -35,7 +35,7 @@ Build-Depends: debhelper (>= 9),
     libfty-common-logging-dev,
     libfty-common-mlm-dev,
     libfty-common-translation-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-proto-dev,
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
@@ -62,7 +62,7 @@ Depends:
     libfty-common-logging-dev,
     libfty-common-mlm-dev,
     libfty-common-translation-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-proto-dev,
     libfty-email1 (= ${binary:Version})
 Description: fty-email development tools
  This package contains development files for fty-email:
