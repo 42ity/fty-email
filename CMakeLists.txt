@@ -4,7 +4,6 @@ cmake_policy(VERSION 3.13)
 project(fty-email
     VERSION 1.0.0
     DESCRIPTION "Email transport for 42ity (based on msmtp)"
-    LANGUAGES CXX
 )
 
 ##############################################################################################################
