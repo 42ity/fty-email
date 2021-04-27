@@ -27,6 +27,7 @@
 */
 
 #include "fty_email_audit_log.h"
+#include "fty_email.h"
 
 Ftylog *EmailAuditLogManager::_emailauditlog = nullptr;
 
@@ -52,5 +53,9 @@ void EmailAuditLogManager::deinit ()
 //  return alerts audit logger
 Ftylog* EmailAuditLogManager::getInstance ()
 {
+    if (!_emailauditlog)
+    {
+        init(DEFAULT_LOG_CONFIG);
+    }
     return _emailauditlog;
 }
