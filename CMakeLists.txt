@@ -82,6 +82,12 @@ install(
 
 etn_test_target(${PROJECT_NAME}
     SOURCES
+        test/main_test.cpp
+
+
+
+
+
         test/main.cpp
         test/email.cpp
         test/emailconfiguration.cpp
@@ -95,42 +101,50 @@ etn_test_target(${PROJECT_NAME}
         src
 )
 
-# etn_test_target(fty-sendmail
-#     SOURCES
-#         test/main.cpp
-#     PUBLIC_INCLUDE_DIR
-#         src
-# )
+if(BUILD_TESTING)
+    enable_testing()
 
-# if(BUILD_TESTING)
-#     enable_testing()
+    # Create a target for the tests
+    etn_test(${PROJECT_NAME}-test
+        SOURCES
+        test/main.cpp
+        test/email.cpp
+        test/emailconfiguration.cpp
+        test/fty_email_server.cpp
+        src/fty_email_server.cpp
+    INCLUDE_DIRS
+        test
+        # test/conf/smtp-test-10.cfg
+        # test/conf/test_en_US.json
+        CONFIGS
+            test/conf/smtp-test-10.cfg
+            test/conf/test_en_US.json
+        INCLUDE_DIRS
+            src
+        USES
+            czmq
+            cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+            fty_common
+            fty_common_logging
+            fty_proto
+            fty_common_mlm
+            fty_common_translation
+            mlm
+            magic
+            fty-utils
+            Catch2::Catch2
+            stdc++fs
+            log4cplus
+    )
 
-#     # Create a target for the tests
-#     etn_test(${PROJECT_NAME}-test
-#         SOURCES
-#             test/fty_email_private_selftest.cc
-#             test/fty_email_selftest.cc
-#             src/fty_email_server.cc
-#         CONFIGS
-#             test/conf/smtp-test-10.cfg
-#             test/conf/test_en_US.json
-#         INCLUDE_DIRS
-#             src
-#         USES
-#             ${PROJECT_NAME}-static
-#             czmq
-#             cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-#             fty_common
-#             fty_common_logging
-#             fty_proto
-#             fty_common_mlm
-#             fty_common_translation
-#             mlm
-#             magic
-#             fty-utils
-#     )
+    #copy test/conf for test
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test/conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-    
-# endif()
+    #enable coverage
+    etn_coverage(${PROJECT_NAME}-test)
+
+    #copy test/conf for test coverage
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test/conf DESTINATION ${CMAKE_BINARY_DIR})
+endif()
 
 ##############################################################################################################
