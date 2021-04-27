@@ -365,8 +365,8 @@ void email_test(bool /* verbose */)
     // src/selftest-ro; if your test creates filesystem objects, please
     // do so under src/selftest-rw. They are defined below along with a
     // usecase for the variables (assert) to make compilers happy.
-    const char* SELFTEST_DIR_RO = "src/selftest-ro";
-    const char* SELFTEST_DIR_RW = "src/selftest-rw";
+    const char* SELFTEST_DIR_RO = "test/conf";
+    const char* SELFTEST_DIR_RW = "test/conf";
     assert(SELFTEST_DIR_RO);
     assert(SELFTEST_DIR_RW);
     // Uncomment these to use C++ strings in C++ selftest code:
@@ -409,8 +409,8 @@ void email_test(bool /* verbose */)
 
     zhash_t* headers = zhash_new();
     {
-        std::string s("bar");
-        zhash_update(headers, "Foo", static_cast<void*>(&s));
+        char *bar = "bar";
+        zhash_insert (headers, "Foo", static_cast<void*>(bar));
     }
     zmsg_t* email_msg = fty_email_encode("uuid", "to", "subject", headers, "body",
         (str_SELFTEST_DIR_RW + "/file1").c_str(), (str_SELFTEST_DIR_RW + "/file2.txt").c_str(), NULL);

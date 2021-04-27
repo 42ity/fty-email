@@ -29,6 +29,7 @@
 
 #include "email.h"
 #include "emailconfiguration.h"
+#include "fty_email_server.h"
 
 //  -------------------------------------------------------------------------
 //  Run all private classes tests.
@@ -42,6 +43,8 @@ fty_email_private_selftest (bool verbose, const char *subtest)
         emailconfiguration_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "email_test"))
         email_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "email_server_test"))
+        fty_email_server_test (verbose);
 }
 /*
 ################################################################################

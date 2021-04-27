@@ -434,8 +434,8 @@ void fty_email_server_test(bool /* verbose */)
     // do so under src/selftest-rw. They are defined below along with a
     // usecase for the variables (assert) to make compilers happy.
 
-    const char* SELFTEST_DIR_RO = "test/conf/";
-    const char* SELFTEST_DIR_RW = "test/conf/";
+    const char* SELFTEST_DIR_RO = "test/conf";
+    const char* SELFTEST_DIR_RW = "test/conf";
     assert(SELFTEST_DIR_RO);
     assert(SELFTEST_DIR_RW);
     // Uncomment these to use C++ strings in C++ selftest code:
@@ -474,8 +474,8 @@ void fty_email_server_test(bool /* verbose */)
         log_debug("Test #1");
         zhash_t* headers = zhash_new();
         {
-            std::string s("bar");
-            zhash_update(headers, "Foo", static_cast<void*>(&s));
+            char *bar = "bar";
+            zhash_insert (headers, "Foo", static_cast<void*>(bar));
         }
         char* file1_name = zsys_sprintf("%s/file1", SELFTEST_DIR_RW);
         assert(file1_name != NULL);
