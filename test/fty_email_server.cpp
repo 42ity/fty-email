@@ -234,8 +234,8 @@ TEST_CASE("fty_email_server_test")
         //      1. send alert message
         zlist_t* actions = zlist_new();
         {
-            std::string s("EMAIL");
-            zlist_append(actions, static_cast<void*>(&s));
+            const char *s = "EMAIL";
+            zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
