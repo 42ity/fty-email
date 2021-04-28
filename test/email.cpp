@@ -58,8 +58,8 @@ TEST_CASE("email_test")
 
     zhash_t* headers = zhash_new();
     {
-        std::string s("bar");
-        zhash_update(headers, "Foo", static_cast<void*>(&s));
+        const char * s = "bar";
+        zhash_update(headers, "Foo", static_cast<void*>(const_cast<char*>(s)));
     }
     zmsg_t* email_msg = fty_email_encode("uuid", "to", "subject", headers, "body",
         (str_SELFTEST_DIR_RW + "/file1").c_str(), (str_SELFTEST_DIR_RW + "/file2.txt").c_str(), NULL);

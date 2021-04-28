@@ -12,8 +12,8 @@ TEST_CASE("fty_email_server_test")
     // do so under src/selftest-rw. They are defined below along with a
     // usecase for the variables (REQUIRE) to make compilers happy.
 
-    const char* SELFTEST_DIR_RO = "test/conf/";
-    const char* SELFTEST_DIR_RW = "test/conf/";
+    const char* SELFTEST_DIR_RO = "test_conf/";
+    const char* SELFTEST_DIR_RW = "test_conf/";
     REQUIRE(SELFTEST_DIR_RO);
     REQUIRE(SELFTEST_DIR_RW);
     // Uncomment these to use C++ strings in C++ selftest code:
@@ -35,6 +35,7 @@ TEST_CASE("fty_email_server_test")
 
     printf(" * fty_email_server: ");
     if (zfile_exists(pidfile)) {
+        std::cerr << "EXIST FILE" << std::endl;
         FILE* fp = fopen(pidfile, "r");
         REQUIRE(fp);
         int pid;
@@ -52,8 +53,8 @@ TEST_CASE("fty_email_server_test")
         log_debug("Test #1");
         zhash_t* headers = zhash_new();
         {
-            std::string s("bar");
-            zhash_update(headers, "Foo", static_cast<void*>(&s));
+            const char * s = "bar";
+            zhash_update(headers, "Foo", static_cast<void*>(const_cast<char*>(s)));
         }
         char* file1_name = zsys_sprintf("%s/file1", SELFTEST_DIR_RW);
         REQUIRE(file1_name != NULL);
@@ -148,8 +149,8 @@ TEST_CASE("fty_email_server_test")
         //      1. send alert message
         zlist_t* actions = zlist_new();
         {
-            std::string s("EMAIL");
-            zlist_append(actions, static_cast<void*>(&s));
+            const char * s = "EMAIL";
+            zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
@@ -281,8 +282,9 @@ TEST_CASE("fty_email_server_test")
         const char* asset_name = "ASSET3";
         zlist_t*    actions    = zlist_new();
         {
-            std::string s("EMAIL");
-            zlist_append(actions, static_cast<void*>(&s));
+
+            const char * s = "EMAIL";
+            zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
@@ -327,8 +329,8 @@ TEST_CASE("fty_email_server_test")
         const char* asset_name = "ASSET3";
         zlist_t*    actions    = zlist_new();
         {
-            std::string s("EMAIL");
-            zlist_append(actions, static_cast<void*>(&s));
+            const char * s = "EMAIL";
+            zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "
@@ -375,8 +377,8 @@ TEST_CASE("fty_email_server_test")
         //      1. send alert message
         zlist_t* actions = zlist_new();
         {
-            std::string s("SMS");
-            zlist_append(actions, static_cast<void*>(&s));
+            const char * s = "SMS";
+            zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
             "{ \"key\": \"Device {{var1}} does not provide expected data. It may be offline or not correctly "

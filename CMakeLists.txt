@@ -83,13 +83,18 @@ etn_test_target(${PROJECT_NAME}
         test/emailconfiguration.cpp
         test/fty_email_server.cpp
         src/fty_email_server.cpp
-    INCLUDE_DIRS
-        test
+    # INCLUDE_DIRS
+    #     test
         # test/conf/smtp-test-10.cfg
         # test/conf/test_en_US.json
     PUBLIC_INCLUDE_DIR
         src
 )
+
+set(CONF_TEST "${CMAKE_BINARY_DIR}/test_conf/")
+
+file(COPY test/conf/smtp-test-10.cfg DESTINATION ${CONF_TEST}/)
+file(COPY test/conf/test_en_US.json DESTINATION ${CONF_TEST}/)
 
 # etn_test_target(fty-sendmail
 #     SOURCES
