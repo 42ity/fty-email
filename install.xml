@@ -11,4 +11,5 @@ Installation model
 
 <install>
     <item type = "systemd-tmpfiles" />
+    <item path = "/etc/fty-email" name = "../src/fty-email-log.cfg" />
 </install>

@@ -198,11 +198,15 @@ int main (int argc, char** argv)
                 log_warning ("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
         }
     }
-    if (language)
-            log_config = zconfig_get (config, "log/config", DEFAULT_LOG_CONFIG);
-    if (log_config)
+    if (language) {
+        log_config = zconfig_get (config, "log/config", DEFAULT_LOG_CONFIG);
+    }
+    if (log_config) {
         ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
 
+        // initialize log for auditability
+        EmailAuditLogManager::init(log_config);
+    }
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
@@ -235,5 +239,8 @@ int main (int argc, char** argv)
     zstr_free (&translation_path);
     zconfig_destroy (&config);
     zstr_free (&config_file);
+
+    // release audit context
+    EmailAuditLogManager::deinit();
     return 0;
 }

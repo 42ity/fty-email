@@ -11,6 +11,8 @@
 *.xml7
 
 # Ignore the source doc texts generated from program sources
+fty_email_audit_log.txt
+fty_email_audit_log.doc
 fty_email_server.txt
 fty_email_server.doc
 fty-email.txt

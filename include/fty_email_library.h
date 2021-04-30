@@ -79,12 +79,15 @@
 
 //  Opaque class structures to allow forward references
 //  These classes are stable or legacy and built in all releases
+typedef struct _fty_email_audit_log_t fty_email_audit_log_t;
+#define FTY_EMAIL_AUDIT_LOG_T_DEFINED
 typedef struct _fty_email_server_t fty_email_server_t;
 #define FTY_EMAIL_SERVER_T_DEFINED
 
 
 //  Public classes, each with its own header file
 #include "fty_email_server.h"
+#include "fty_email_audit_log.h"
 
 #ifdef FTY_EMAIL_BUILD_DRAFT_API
 

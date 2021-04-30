@@ -89,6 +89,7 @@
 
     <class name = "emailconfiguration" private = "1">Class that is responsible for email configuration</class>
     <class name = "email" private = "1">Smtp</class>
+    <class name = "fty_email_audit_log" selftest = "0" state = "stable">Manage audit log</class>
     <class name = "fty_email_server" state = "stable">Email transport</class>
 
     <main name = "fty-email" service = "1">
