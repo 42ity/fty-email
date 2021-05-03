@@ -20,7 +20,7 @@ EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/bios
 EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/bios__%n.conf
 EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/fty
 EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/fty__%n.conf
-Environment="prefix=@CMAKE_INSTALL_PREFIX@"
+Environment="prefix=@CMAKE_INSTALL_FULL_PREFIX@"
 ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/@PROJECT_NAME@ --config @CMAKE_INSTALL_FULL_SYSCONFDIR@/@PROJECT_NAME@/@PROJECT_NAME@.cfg
 
 [Install]
