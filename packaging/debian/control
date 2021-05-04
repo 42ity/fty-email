@@ -23,6 +23,9 @@ Priority:       optional
 Maintainer:     fty-email Developers <eatonipcopensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
+    cmake (>=3.0),
+    fty-cmake-dev,
+    libfty-utils-dev,
     pkg-config,
     libsodium-dev,
     libzmq3-dev,
@@ -33,38 +36,11 @@ Build-Depends: debhelper (>= 9),
     libfty-common-logging-dev,
     libfty-common-mlm-dev,
     libfty-common-translation-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-proto-dev,
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
-
-Package: libfty-email1
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: fty-email shared library
- This package contains shared library for fty-email:
- email transport for 42ity (based on msmtp)
-
-Package: libfty-email-dev
-Architecture: any
-Section: libdevel
-Depends:
-    ${misc:Depends},
-    libsodium-dev,
-    libzmq3-dev,
-    libczmq-dev (>= 3.0.2),
-    libmlm-dev (>= 1.0.0),
-    libcxxtools-dev,
-    libmagic-dev,
-    libfty-common-logging-dev,
-    libfty-common-mlm-dev,
-    libfty-common-translation-dev,
-    libfty-proto-dev (>= 1.0.0),
-    libfty-email1 (= ${binary:Version})
-Description: fty-email development tools
- This package contains development files for fty-email:
- email transport for 42ity (based on msmtp)
 
 Package: fty-email
 Architecture: any
@@ -73,13 +49,3 @@ Description: runnable binaries from fty-email
  Main package for fty-email:
  email transport for 42ity (based on msmtp)
 
-Package: fty-email-dbg
-Architecture: any
-Section: debug
-Priority: optional
-Depends:
-    fty-email (= ${binary:Version}),
-    ${misc:Depends}
-Description: fty-email debugging symbols
- This package contains the debugging symbols for fty-email:
- email transport for 42ity (based on msmtp).

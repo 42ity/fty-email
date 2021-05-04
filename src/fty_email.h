@@ -18,12 +18,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-
-#ifndef FTY_EMAIL_H_H_INCLUDED
-#define FTY_EMAIL_H_H_INCLUDED
-
-//  Include the project library file
-#include "fty_email_library.h"
+#pragma once
 
 //  Add your own public definitions here, if you need them
 #define FTY_EMAIL_ADDRESS               "fty-email"
@@ -32,4 +27,4 @@
 #define FTY_EMAIL_CONFIG_FILE           "/etc/fty-email/fty-email.cfg"
 #define DEFAULT_LOG_CONFIG              "/etc/fty/ftylog.cfg"
 #define DEFAULT_LANGUAGE                "en_US"
-#endif
+
