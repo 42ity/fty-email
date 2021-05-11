@@ -3,6 +3,7 @@
 #include "fty_email_server.h"
 #include <catch2/catch.hpp>
 #include <fstream>
+#include <fty_log.h>
 
 TEST_CASE("email_test")
 {

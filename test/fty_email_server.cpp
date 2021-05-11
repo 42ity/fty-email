@@ -4,6 +4,8 @@
 #include <catch2/catch.hpp>
 #include <fty/convert.h>
 #include <fty_common_translation.h>
+#include <fty_log.h>
+#include <fty_common_mlm.h>
 
 TEST_CASE("fty_email_server_test")
 {
