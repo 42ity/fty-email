@@ -91,7 +91,7 @@ etn_test_target(${PROJECT_NAME}
         src
 )
 
-set(CONF_TEST "${CMAKE_BINARY_DIR}/test_conf/")
+set(CONF_TEST "${CMAKE_CURRENT_BINARY_DIR}/test_conf/")
 
 file(COPY test/conf/smtp-test-10.cfg DESTINATION ${CONF_TEST}/)
 file(COPY test/conf/test_en_US.json DESTINATION ${CONF_TEST}/)

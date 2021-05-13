@@ -224,7 +224,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     zmsg_t* msg = *msg_p;
 
     std::stringstream       buff;
-    cxxtools::MimeMultipart mime;
+    cxxtools::Mime mime;
 
     char*       to      = zmsg_popstr(msg);
     char*       subject = zmsg_popstr(msg);
@@ -234,7 +234,9 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 
     mime.setHeader("To", to);
     mime.setHeader("Subject", subject);
-    mime.addObject(body.c_str());
+    cxxtools::Mimepart part;
+    part.setData(body);
+    mime.addPart(part);
 
     zstr_free(&to);
     zstr_free(&subject);
@@ -272,9 +274,9 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             std::ifstream ipath{path};
 
             if (s_is_text(mime_type))
-                mime.attachTextFile(ipath, basename(path), mime_type);
+                mime.addTextFile(mime_type, basename(path), ipath);
             else
-                mime.attachBinaryFile(ipath, basename(path), mime_type);
+                mime.addBinaryFile(mime_type, basename(path), ipath);
 
             ipath.close();
             zstr_free(&path);
