@@ -43,7 +43,6 @@ Example:
 #include <magic.h>
 #include <czmq.h>
 
-#include <fty_common_mlm_subprocess.h>
 #include <functional>
 
 #include <string>

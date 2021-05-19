@@ -18,15 +18,15 @@ etn_target(static ${PROJECT_NAME}-static
         src/fty_email_server.cc
     USES
         czmq
+        mlm
+        magic
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty_common_logging
+        fty-utils
         fty_common
         fty_proto
         fty_common_mlm
+        fty_common_logging
         fty_common_translation
-        mlm
-        magic
-        fty-utils
     PRIVATE
 )
 

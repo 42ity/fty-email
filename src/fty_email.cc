@@ -31,6 +31,7 @@
 #include <fty/convert.h>
 #include <fty_common_translation.h>
 #include <getopt.h>
+#include <fty_log.h>
 // #include "fty_email_classes.h"
 
 #define TRANSLATION_ROOT   "/usr/share/etn-translations"

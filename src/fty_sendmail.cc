@@ -36,6 +36,10 @@
 #include "fty_email_server.h"
 #include <fty_common_mlm.h>
 #include <getopt.h>
+#include <vector>
+#include <string>
+#include <fty_log.h>
+#include <iostream>
 
 void usage()
 {
@@ -56,7 +60,7 @@ int main(int argc, char** argv)
     int                      help    = 0;
     int                      verbose = 0;
     std::vector<std::string> attachments;
-    const char*              recipient = NULL;
+    const char*              recipient = nullptr;
     std::string              subj;
     ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS_SENDMAIL_ONLY);
 
@@ -75,8 +79,8 @@ int main(int argc, char** argv)
 #pragma GCC diagnostic pop
 #endif
 
-    char* config_file = NULL;
-    char* p           = NULL;
+    char* config_file = nullptr;
+    char* p           = nullptr;
 
     while (true) {
 
@@ -116,7 +120,7 @@ int main(int argc, char** argv)
         recipient = argv[optind];
         ++optind;
     }
-    if (help || recipient == NULL || optind < argc) {
+    if (help || recipient == nullptr || optind < argc) {
         usage();
         exit(1);
     }
@@ -132,17 +136,17 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
-        if (zconfig_get(config, "malamute/endpoint", NULL)) {
+        if (zconfig_get(config, "malamute/endpoint", nullptr)) {
             zstr_free(&endpoint);
-            endpoint = strdup(zconfig_get(config, "malamute/endpoint", NULL));
+            endpoint = strdup(zconfig_get(config, "malamute/endpoint", nullptr));
         }
-        if (zconfig_get(config, "malamute/address", NULL)) {
+        if (zconfig_get(config, "malamute/address", nullptr)) {
             zstr_free(&smtp_address);
-            smtp_address = strdup(zconfig_get(config, "malamute/address", NULL));
+            smtp_address = strdup(zconfig_get(config, "malamute/address", nullptr));
         }
-        if (zconfig_get(config, "log/config", NULL)) {
+        if (zconfig_get(config, "log/config", nullptr)) {
             zstr_free(&log_config);
-            log_config = strdup(zconfig_get(config, "log/config", NULL));
+            log_config = strdup(zconfig_get(config, "log/config", nullptr));
         }
 
         zconfig_destroy(&config);
@@ -161,15 +165,16 @@ int main(int argc, char** argv)
     zstr_free(&endpoint);
     assert(r != -1);
 
-    std::string body = MlmSubprocess::read_all(STDIN_FILENO);
-    zmsg_t*     mail = fty_email_encode("UUID", recipient, subj.c_str(), NULL, body.c_str(), NULL);
+    std::istreambuf_iterator<char> begin(std::cin), end;
+    std::string body(begin, end);
+    zmsg_t*     mail = fty_email_encode("UUID", recipient, subj.c_str(), nullptr, body.c_str(), nullptr);
 
-    for (const auto file : attachments) {
+    for (const auto& file : attachments) {
         zmsg_addstr(mail, file.c_str());
     }
 
     zmsg_print(mail);
-    r = mlm_client_sendto(client, smtp_address, "SENDMAIL", NULL, 2000, &mail);
+    r = mlm_client_sendto(client, smtp_address, "SENDMAIL", nullptr, 2000, &mail);
     zstr_free(&smtp_address);
     if (r == -1) {
         log_error("Failed to send the email (mlm_client_sendto returned -1).");

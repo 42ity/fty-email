@@ -31,7 +31,7 @@
 #include "fty_email_server.h"
 #include <ctime>
 #include <fstream>
-#include <fty_common_mlm.h>
+//#include <fty_common_mlm.h>
 #include <fty_log.h>
 #include <sstream>
 #include <stdio.h>
@@ -39,8 +39,9 @@
 // to ensure POSIX basename!!!
 // DO NOT REMOVE otherwise GNU basename can be used
 #include <cxxtools/mime.h>
-#include <cxxtools/regex.h>
+#include <fty/process.h>
 #include <libgen.h>
+#include <regex>
 
 Smtp::Smtp()
     : _host{}
@@ -170,6 +171,7 @@ void Smtp::sendmail(const std::string& to, const std::string& subject, const std
 
 void Smtp::sendmail(const std::string& data) const
 {
+    using namespace fmt::literals;
 
     // for testing
     if (_has_fn) {
@@ -181,34 +183,26 @@ void Smtp::sendmail(const std::string& data) const
     if (_host.empty()) {
         return;
     }
-    MlmSubprocess::Argv       argv = {_msmtp, "-t", "-C", cfg};
-    MlmSubprocess::SubProcess proc{argv, MlmSubprocess::SubProcess::STDIN_PIPE |
-                                             MlmSubprocess::SubProcess::STDOUT_PIPE |
-                                             MlmSubprocess::SubProcess::STDERR_PIPE};
-
-    bool bret = proc.run();
+    fty::Process proc(_msmtp, {"-t", "-C", cfg});
+    auto         bret = proc.run();
     if (!bret) {
-        throw std::runtime_error(_msmtp + " failed with exit code '" + std::to_string(proc.getReturnCode()) +
-                                 "'\nstderr:\n" + MlmSubprocess::read_all(proc.getStderr()));
+        throw std::runtime_error("{} failed with '{}'"_format(_msmtp, bret.error()));
     }
 
-    ssize_t wr = ::write(proc.getStdin(), data.c_str(), data.size());
-    if (wr != static_cast<ssize_t>(data.size())) {
-        log_warning("Email truncated, exp '%zu', piped '%zd'", data.size(), wr);
+    bool wr = proc.write(data);
+    if (!wr) {
+        log_warning("Email truncated");
     }
-    ::close(proc.getStdin()); // EOF
 
-    int ret = proc.wait();
+    auto ret = proc.wait();
     deleteConfigFile(cfg);
-    if (ret != 0) {
-        throw std::runtime_error(_msmtp + " wait with exit code '" + std::to_string(proc.getReturnCode()) +
-                                 "'\nstderr:\n" + MlmSubprocess::read_all(proc.getStderr()));
+    if (!ret) {
+        throw std::runtime_error("{} wait with '{}'"_format(_msmtp, ret.error()));
     }
 
-    ret = proc.getReturnCode();
-    if (ret != 0) {
-        throw std::runtime_error(_msmtp + " failed with exit code '" + std::to_string(proc.getReturnCode()) +
-                                 "'\nstderr:\n" + MlmSubprocess::read_all(proc.getStderr()));
+    if (*ret != 0) {
+        throw std::runtime_error(
+            "{} failed with exit code '{}'\nstderr: {}\n"_format(_msmtp, *ret, proc.readAllStandardError()));
     }
 }
 
@@ -218,28 +212,30 @@ static bool s_is_text(const char* mime)
     return !strncmp(mime, "text", 4);
 }
 
+static std::string popString(zmsg_t* msg)
+{
+    char*       it = zmsg_popstr(msg);
+    std::string ret(it);
+    zstr_free(&it);
+    return ret;
+}
+
 std::string Smtp::msg2email(zmsg_t** msg_p) const
 {
     assert(msg_p && *msg_p);
     zmsg_t* msg = *msg_p;
 
     std::stringstream       buff;
-    cxxtools::Mime mime;
+    cxxtools::MimeMultipart mime;
 
-    char*       to      = zmsg_popstr(msg);
-    char*       subject = zmsg_popstr(msg);
+    std::string to      = popString(msg);
+    std::string subject = popString(msg);
     std::string body    = getIpAddr();
-    ZstrGuard   bodyTemp(zmsg_popstr(msg));
-    body += bodyTemp.get();
+    body += popString(msg);
 
     mime.setHeader("To", to);
     mime.setHeader("Subject", subject);
-    cxxtools::Mimepart part;
-    part.setData(body);
-    mime.addPart(part);
-
-    zstr_free(&to);
-    zstr_free(&subject);
+    mime.addObject(body);
 
     // new protocol have more frames
     if (zmsg_size(msg) != 0) {
@@ -274,9 +270,9 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             std::ifstream ipath{path};
 
             if (s_is_text(mime_type))
-                mime.addTextFile(mime_type, basename(path), ipath);
+                mime.attachTextFile(ipath, basename(path), mime_type);
             else
-                mime.addBinaryFile(mime_type, basename(path), ipath);
+                mime.attachBinaryFile(ipath, basename(path), mime_type);
 
             ipath.close();
             zstr_free(&path);
@@ -318,36 +314,36 @@ SmtpError msmtp_stderr2code(const std::string& inp)
     if (inp.size() == 0)
         return SmtpError::Succeeded;
 
-    static cxxtools::Regex ServerUnreachable{"cannot connect to .*, port .*"};
-    static cxxtools::Regex DNSFailed{
-        "(cannot locate host.*: Name or service not known|the server does not support DNS)", REG_EXTENDED};
-    static cxxtools::Regex SSLNotSupported{
+    static std::regex ServerUnreachable{"cannot connect to .*, port .*"};
+    static std::regex DNSFailed{
+        "(cannot locate host.*: Name or service not known|the server does not support DNS)", std::regex::extended};
+    static std::regex SSLNotSupported{
         "(the server does not support TLS via the STARTTLS command|command STARTTLS failed|cannot use a secure "
         "authentication method)"};
-    static cxxtools::Regex AuthMethodNotSupported{
+    static std::regex AuthMethodNotSupported{
         "(the server does not support authentication|authentication method .* not supported|cannot find a usable "
         "authentication method)"};
-    static cxxtools::Regex AuthFailed{"(authentication failed|(AUTH LOGIN|AUTH CRAM-MD5|AUTH EXTERNAL) failed)"};
-    static cxxtools::Regex UnknownCA{
+    static std::regex AuthFailed{"(authentication failed|(AUTH LOGIN|AUTH CRAM-MD5|AUTH EXTERNAL) failed)"};
+    static std::regex UnknownCA{
         "(no certificate was founderror gettint .* fingerprint|the certificate fingerprint does not match|the "
         "certificate has been revoked|the certificate hasn't got a known issuer|the certificate is not trusted)"};
 
-    if (ServerUnreachable.match(inp))
+    if (std::regex_match(inp, ServerUnreachable))
         return SmtpError::ServerUnreachable;
 
-    if (DNSFailed.match(inp))
+    if (std::regex_match(inp, DNSFailed))
         return SmtpError::DNSFailed;
 
-    if (AuthMethodNotSupported.match(inp))
+    if (std::regex_match(inp, AuthMethodNotSupported))
         return SmtpError::AuthMethodNotSupported;
 
-    if (AuthFailed.match(inp))
+    if (std::regex_match(inp, AuthFailed))
         return SmtpError::AuthFailed;
 
-    if (SSLNotSupported.match(inp))
+    if (std::regex_match(inp, SSLNotSupported))
         return SmtpError::SSLNotSupported;
 
-    if (UnknownCA.match(inp))
+    if (std::regex_match(inp, UnknownCA))
         return SmtpError::UnknownCA;
 
     return SmtpError::Unknown;

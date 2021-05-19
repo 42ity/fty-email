@@ -6,6 +6,7 @@
 #include <fty_common_translation.h>
 #include <fty_log.h>
 #include <fty_common_mlm.h>
+#include <iostream>
 
 TEST_CASE("fty_email_server_test")
 {
