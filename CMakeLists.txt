@@ -15,7 +15,11 @@ etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/email.cc
         src/emailconfiguration.cc
+        src/emailconfiguration.h
+        src/email.h
+        src/fty_email.h
         src/fty_email_server.cc
+        src/fty_email_server.h
     USES
         czmq
         mlm
@@ -39,11 +43,27 @@ etn_target(exe ${PROJECT_NAME}
         ${PROJECT_NAME}-static
 )
 
+##############################################################################################################
+
 etn_target(exe fty-sendmail
     SOURCES
         src/fty_sendmail.cc
     USES
         ${PROJECT_NAME}-static
+)
+
+##############################################################################################################
+
+etn_test_target(${PROJECT_NAME}-static
+    CONFIGS
+        test/conf/*
+    SOURCES
+        test/main.cpp
+        test/email.cpp
+        test/emailconfiguration.cpp
+        test/fty_email_server.cpp
+    SUBDIR
+        test
 )
 
 ##############################################################################################################
@@ -75,21 +95,6 @@ install(
 )
 
 ##############################################################################################################
-
-etn_test_target(${PROJECT_NAME}
-    SOURCES
-        test/main.cpp
-        test/email.cpp
-        test/emailconfiguration.cpp
-        test/fty_email_server.cpp
-        src/fty_email_server.cpp
-    # INCLUDE_DIRS
-    #     test
-        # test/conf/smtp-test-10.cfg
-        # test/conf/test_en_US.json
-    PUBLIC_INCLUDE_DIR
-        src
-)
 
 set(CONF_TEST "${CMAKE_CURRENT_BINARY_DIR}/test_conf/")
 

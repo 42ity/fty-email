@@ -58,7 +58,7 @@ Smtp::Smtp()
     if (!_magic)
         throw std::runtime_error("Cannot open magic_cookie");
 
-    int r = magic_load(_magic, NULL);
+    int r = magic_load(_magic, nullptr);
     if (r == -1) {
         magic_close(_magic);
         throw std::runtime_error("Cannot load magic database");
@@ -148,7 +148,7 @@ void Smtp::sendmail(const std::vector<std::string>& to, const std::string& subje
     for (const auto& it : to) {
         zuuid_t* uuid = zuuid_new();
         zmsg_t*  msg =
-            fty_email_encode(zuuid_str_canonical(uuid), it.c_str(), subject.c_str(), NULL, body.c_str(), NULL);
+            fty_email_encode(zuuid_str_canonical(uuid), it.c_str(), subject.c_str(), nullptr, body.c_str(), nullptr);
         zuuid_destroy(&uuid);
 
         // MVY: this is weird, horrible, ugly and hard to use.
@@ -244,7 +244,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         zframe_destroy(&frame);
         zhash_autofree(headers);
 
-        for (char* value = static_cast<char*>(zhash_first(headers)); value != NULL;
+        for (char* value = static_cast<char*>(zhash_first(headers)); value != nullptr;
              value       = static_cast<char*>(zhash_next(headers))) {
             const char* key = zhash_cursor(headers);
             mime.setHeader(key, value);
@@ -253,7 +253,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 
 
         // NOTE: setLocale(LC_DATE, "C") should be called in outer scope
-        time_t     t   = ::time(NULL);
+        time_t     t   = ::time(nullptr);
         struct tm* tmp = ::localtime(&t);
         char       buf[256];
         strftime(buf, sizeof(buf), "%a, %d %b %Y %T %z\n", tmp);
@@ -279,7 +279,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         }
     }
     zmsg_destroy(&msg);
-    *msg_p = NULL;
+    *msg_p = nullptr;
 
     buff << mime;
     return buff.str();
@@ -316,17 +316,17 @@ SmtpError msmtp_stderr2code(const std::string& inp)
 
     static std::regex ServerUnreachable{"cannot connect to .*, port .*"};
     static std::regex DNSFailed{
-        "(cannot locate host.*: Name or service not known|the server does not support DNS)", std::regex::extended};
+        ".*(cannot locate host.*: Name or service not known|the server does not support DNS).*", std::regex::extended};
     static std::regex SSLNotSupported{
-        "(the server does not support TLS via the STARTTLS command|command STARTTLS failed|cannot use a secure "
-        "authentication method)"};
+        ".*(the server does not support TLS via the STARTTLS command|command STARTTLS failed|cannot use a secure "
+        "authentication method).*"};
     static std::regex AuthMethodNotSupported{
-        "(the server does not support authentication|authentication method .* not supported|cannot find a usable "
-        "authentication method)"};
+        ".*(the server does not support authentication|authentication method .* not supported|cannot find a usable "
+        "authentication method).*"};
     static std::regex AuthFailed{"(authentication failed|(AUTH LOGIN|AUTH CRAM-MD5|AUTH EXTERNAL) failed)"};
     static std::regex UnknownCA{
-        "(no certificate was founderror gettint .* fingerprint|the certificate fingerprint does not match|the "
-        "certificate has been revoked|the certificate hasn't got a known issuer|the certificate is not trusted)"};
+        ".*(no certificate was founderror gettint .* fingerprint|the certificate fingerprint does not match|the "
+        "certificate has been revoked|the certificate hasn't got a known issuer|the certificate is not trusted).*"};
 
     if (std::regex_match(inp, ServerUnreachable))
         return SmtpError::ServerUnreachable;
