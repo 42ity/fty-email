@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <string>
 
 std::string generate_body(fty_proto_t* alert, const std::string& priority, const std::string& extname);
