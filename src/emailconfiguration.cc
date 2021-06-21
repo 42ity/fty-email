@@ -19,12 +19,7 @@
     =========================================================================
 */
 
-/*
-@header
-    emailconfiguration - Class that is responsible for email configuration
-@discuss
-@end
-*/
+/// Class that is responsible for email configuration
 
 #include "emailconfiguration.h"
 #include <fty_common_macros.h>
@@ -96,7 +91,7 @@ static std::string s_generateEmailBodyResolved(fty_proto_t* alert, const std::st
     char*       description_char = translation_get_translated_text(fty_proto_description(alert));
     std::string description(description_char);
     zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description.c_str());
+    result = replace_tokens(result, "__description__", description);
     return result;
 }
 
@@ -112,7 +107,7 @@ static std::string s_generateEmailBodyActive(
     char*       description_char = translation_get_translated_text(fty_proto_description(alert));
     std::string description(description_char);
     zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description.c_str());
+    result = replace_tokens(result, "__description__", description);
     result = replace_tokens(result, "__priority__", priority);
     result = replace_tokens(result, "__severity__", fty_proto_severity(alert));
     result = replace_tokens(result, "__state__", fty_proto_state(alert));
@@ -140,7 +135,7 @@ static std::string s_generateEmailSubjectActive(
     char*       description_char = translation_get_translated_text(fty_proto_description(alert));
     std::string description(description_char);
     zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description.c_str());
+    result = replace_tokens(result, "__description__", description);
     result = replace_tokens(result, "__priority__", priority);
     result = replace_tokens(result, "__severity__", fty_proto_severity(alert));
     result = replace_tokens(result, "__state__", fty_proto_state(alert));

@@ -19,30 +19,26 @@
     =========================================================================
 */
 
-/*
-@header
-    fty_email - Email transport for 42ity project
-@discuss
-@end
-*/
+/// fty_email - Email transport for 42ity project
 
 #include "fty_email.h"
 #include "fty_email_server.h"
 #include <fty/convert.h>
 #include <fty_common_translation.h>
+#include <fty_log.h>
 #include <getopt.h>
-// #include "fty_email_classes.h"
 
 #define TRANSLATION_ROOT   "/usr/share/etn-translations"
 #define TRANSLATION_PREFIX "locale_"
 
 // hack to allow reload of config file w/o the need to rewrite server to zloop and reactors
-char*      config_file      = NULL;
-zconfig_t* config           = NULL;
-char*      language         = NULL;
-char*      translation_path = NULL;
-char*      log_config       = NULL;
-void       usage()
+char*      config_file      = nullptr;
+zconfig_t* config           = nullptr;
+char*      language         = nullptr;
+char*      translation_path = nullptr;
+char*      log_config       = nullptr;
+
+void usage()
 {
     puts(
         "fty-email [options]\n"
@@ -66,7 +62,7 @@ static int s_timer_event(zloop_t* /* loop */, int /* timer_id */, void* output)
     if (zconfig_has_changed(config)) {
         log_info("Content of %s have changed, reload it", config_file);
         zconfig_reload(&config);
-        zstr_sendx(output, "LOAD", config_file, NULL);
+        zstr_sendx(output, "LOAD", config_file, nullptr);
     }
     return 0;
 }
@@ -102,7 +98,7 @@ int main(int argc, char** argv)
     static struct option long_options[] = {{"help", no_argument, &help, 1}, {"verbose", no_argument, &verbose, 1},
         {"server", required_argument, 0, 's'}, {"port", required_argument, 0, 'p'}, {"user", required_argument, 0, 'u'},
         {"from", required_argument, 0, 'f'}, {"encryption", required_argument, 0, 'e'},
-        {"config", required_argument, 0, 'c'}, {NULL, 0, 0, 0}};
+        {"config", required_argument, 0, 'c'}, {nullptr, 0, 0, 0}};
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif
@@ -154,7 +150,7 @@ int main(int argc, char** argv)
         log_info(
             "No config file specified, falling back to enviromental variables.\nNote this is deprecated and will be "
             "removed!");
-        config = zconfig_new("root", NULL);
+        config = zconfig_new("root", nullptr);
         zconfig_put(config, "server/verbose", verbose ? "1" : "0");
         zconfig_put(config, "server/language", DEFAULT_LANGUAGE);
 
@@ -176,7 +172,7 @@ int main(int argc, char** argv)
         zconfig_put(config, "malamute/endpoint", FTY_EMAIL_ENDPOINT);
         zconfig_put(config, "malamute/address", FTY_EMAIL_ADDRESS);
         zconfig_put(config, "log/config", DEFAULT_LOG_CONFIG);
-        
+
         strcpy(log_config, DEFAULT_LOG_CONFIG);
         zconfig_print(config);
 
@@ -208,7 +204,7 @@ int main(int argc, char** argv)
 
     puts("START fty-email - Daemon that is responsible for email notification about alerts");
 
-    zactor_t* smtp_server = zactor_new(fty_email_server, (void*)NULL);
+    zactor_t* smtp_server = zactor_new(fty_email_server, nullptr);
     if (!smtp_server) {
         log_error("smtp_server: cannot start the daemon");
         return -1;
@@ -225,8 +221,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    zstr_sendx(smtp_server, "LOAD", config_file, NULL);
-    zstr_sendx(send_mail_only_server, "LOAD", config_file, NULL);
+    zstr_sendx(smtp_server, "LOAD", config_file, nullptr);
+    zstr_sendx(send_mail_only_server, "LOAD", config_file, nullptr);
 
     zloop_t* check_config = zloop_new();
     // as 5 minutes is the smallest possible reaction time

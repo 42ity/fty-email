@@ -26,8 +26,6 @@ Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
     fty-cmake-dev,
     libfty-utils-dev,
-    pkg-config,
-    libsodium-dev,
     libzmq3-dev,
     libczmq-dev (>= 3.0.2),
     libmlm-dev (>= 1.0.0),
@@ -36,11 +34,7 @@ Build-Depends: debhelper (>= 9),
     libfty-common-logging-dev,
     libfty-common-mlm-dev,
     libfty-common-translation-dev,
-    libfty-proto-dev,
-    systemd,
-    dh-systemd,
-    asciidoc-base | asciidoc, xmlto,
-    dh-autoreconf
+    libfty-proto-dev
 
 Package: fty-email
 Architecture: any

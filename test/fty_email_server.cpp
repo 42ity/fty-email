@@ -1,38 +1,23 @@
-#include "fty_email_server.h"
-#include "emailconfiguration.h"
-#include "fty_email.h"
+#include "src/fty_email_server.h"
+#include "src/emailconfiguration.h"
+#include "src/fty_email.h"
 #include <catch2/catch.hpp>
 #include <fty/convert.h>
+#include <fty_common_mlm.h>
 #include <fty_common_translation.h>
 #include <fty_log.h>
-#include <fty_common_mlm.h>
+#include <iostream>
 
 TEST_CASE("fty_email_server_test")
 {
-    // Note: If your selftest reads SCMed fixture data, please keep it in
-    // src/selftest-ro; if your test creates filesystem objects, please
-    // do so under src/selftest-rw. They are defined below along with a
-    // usecase for the variables (REQUIRE) to make compilers happy.
-
-    const char* SELFTEST_DIR_RO = "test_conf/";
-    const char* SELFTEST_DIR_RW = "test_conf/";
-    REQUIRE(SELFTEST_DIR_RO);
-    REQUIRE(SELFTEST_DIR_RW);
-    // Uncomment these to use C++ strings in C++ selftest code:
-    // std::string str_SELFTEST_DIR_RO = std::string(SELFTEST_DIR_RO);
-    // std::string str_SELFTEST_DIR_RW = std::string(SELFTEST_DIR_RW);
-    // REQUIRE ( (str_SELFTEST_DIR_RO != "") );
-    // REQUIRE ( (str_SELFTEST_DIR_RW != "") );
-    // NOTE that for "char*" context you need (str_SELFTEST_DIR_RO + "/myfilename").c_str()
-
-    int rv = translation_initialize(FTY_EMAIL_ADDRESS, SELFTEST_DIR_RO, "test_");
+    int rv = translation_initialize(FTY_EMAIL_ADDRESS, "test/conf", "test_");
     if (rv != TE_OK)
         log_warning("Translation not initialized");
 
-    char* pidfile = zsys_sprintf("%s/btest.pid", SELFTEST_DIR_RW);
+    char* pidfile = zsys_sprintf("%s/btest.pid", ".");
     REQUIRE(pidfile != NULL);
 
-    char* smtpcfg_file = zsys_sprintf("%s/smtp.cfg", SELFTEST_DIR_RW);
+    char* smtpcfg_file = zsys_sprintf("%s/smtp.cfg", ".");
     REQUIRE(smtpcfg_file != NULL);
 
     printf(" * fty_email_server: ");
@@ -55,12 +40,12 @@ TEST_CASE("fty_email_server_test")
         log_debug("Test #1");
         zhash_t* headers = zhash_new();
         {
-            const char * s = "bar";
+            const char* s = "bar";
             zhash_update(headers, "Foo", static_cast<void*>(const_cast<char*>(s)));
         }
-        char* file1_name = zsys_sprintf("%s/file1", SELFTEST_DIR_RW);
+        char* file1_name = zsys_sprintf("%s/file1", ".");
         REQUIRE(file1_name != NULL);
-        char* file2_name = zsys_sprintf("%s/file2.txt", SELFTEST_DIR_RW);
+        char* file2_name = zsys_sprintf("%s/file2.txt", ".");
         REQUIRE(file2_name != NULL);
         zmsg_t* email_msg = fty_email_encode("UUID", "TO", "SUBJECT", headers, "BODY", file1_name, file2_name, NULL);
         REQUIRE(email_msg);
@@ -151,7 +136,7 @@ TEST_CASE("fty_email_server_test")
         //      1. send alert message
         zlist_t* actions = zlist_new();
         {
-            const char * s = "EMAIL";
+            const char* s = "EMAIL";
             zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
@@ -285,7 +270,7 @@ TEST_CASE("fty_email_server_test")
         zlist_t*    actions    = zlist_new();
         {
 
-            const char * s = "EMAIL";
+            const char* s = "EMAIL";
             zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
@@ -331,7 +316,7 @@ TEST_CASE("fty_email_server_test")
         const char* asset_name = "ASSET3";
         zlist_t*    actions    = zlist_new();
         {
-            const char * s = "EMAIL";
+            const char* s = "EMAIL";
             zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(
@@ -379,7 +364,7 @@ TEST_CASE("fty_email_server_test")
         //      1. send alert message
         zlist_t* actions = zlist_new();
         {
-            const char * s = "SMS";
+            const char* s = "SMS";
             zlist_append(actions, static_cast<void*>(const_cast<char*>(s)));
         }
         std::string description(

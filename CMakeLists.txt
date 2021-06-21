@@ -15,18 +15,22 @@ etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/email.cc
         src/emailconfiguration.cc
+        src/emailconfiguration.h
+        src/email.h
+        src/fty_email.h
         src/fty_email_server.cc
+        src/fty_email_server.h
     USES
         czmq
+        mlm
+        magic
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty_common_logging
+        fty-utils
         fty_common
         fty_proto
         fty_common_mlm
+        fty_common_logging
         fty_common_translation
-        mlm
-        magic
-        fty-utils
     PRIVATE
 )
 
@@ -39,11 +43,27 @@ etn_target(exe ${PROJECT_NAME}
         ${PROJECT_NAME}-static
 )
 
+##############################################################################################################
+
 etn_target(exe fty-sendmail
     SOURCES
         src/fty_sendmail.cc
     USES
         ${PROJECT_NAME}-static
+)
+
+##############################################################################################################
+
+etn_test_target(${PROJECT_NAME}-static
+    CONFIGS
+        test/conf/*
+    SOURCES
+        test/main.cpp
+        test/email.cpp
+        test/emailconfiguration.cpp
+        test/fty_email_server.cpp
+    SUBDIR
+        test
 )
 
 ##############################################################################################################
@@ -76,22 +96,7 @@ install(
 
 ##############################################################################################################
 
-etn_test_target(${PROJECT_NAME}
-    SOURCES
-        test/main.cpp
-        test/email.cpp
-        test/emailconfiguration.cpp
-        test/fty_email_server.cpp
-        src/fty_email_server.cpp
-    # INCLUDE_DIRS
-    #     test
-        # test/conf/smtp-test-10.cfg
-        # test/conf/test_en_US.json
-    PUBLIC_INCLUDE_DIR
-        src
-)
-
-set(CONF_TEST "${CMAKE_BINARY_DIR}/test_conf/")
+set(CONF_TEST "${CMAKE_CURRENT_BINARY_DIR}/test_conf/")
 
 file(COPY test/conf/smtp-test-10.cfg DESTINATION ${CONF_TEST}/)
 file(COPY test/conf/test_en_US.json DESTINATION ${CONF_TEST}/)
