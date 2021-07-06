@@ -89,8 +89,9 @@ install(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
 )
 
+# script bin/
 install(
-    FILES fty-device-scan 
+    PROGRAMS fty-device-scan 
     DESTINATION ${CMAKE_INSTALL_BINDIR}/
 )
 
