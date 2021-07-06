@@ -15,6 +15,7 @@ etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/email.cc
         src/emailconfiguration.cc
+        src/fty_email_audit_log.cc
         src/emailconfiguration.h
         src/email.h
         src/fty_email.h
@@ -75,6 +76,9 @@ etn_configure_file(
     DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME}
 )
 
+# Agent log config
+install(FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}-log.cfg DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME})
+
 #systemd-tmpfiles
 etn_configure_file(
     src/conf/${PROJECT_NAME}.service.in
@@ -85,13 +89,13 @@ etn_configure_file(
 
 # .conf etc/
 install(
-    FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf 
+    FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/
 )
 
 # script bin/
 install(
-    PROGRAMS fty-device-scan 
+    PROGRAMS fty-device-scan
     DESTINATION ${CMAKE_INSTALL_BINDIR}/
 )
 
@@ -137,7 +141,7 @@ file(COPY test/conf/test_en_US.json DESTINATION ${CONF_TEST}/)
 #             fty-utils
 #     )
 
-    
+
 # endif()
 
 ##############################################################################################################
