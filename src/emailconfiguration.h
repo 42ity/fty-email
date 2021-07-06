@@ -21,8 +21,8 @@
 
 #pragma once
 
+#include <fty_proto.h>
 #include <string>
-#include <ftyproto.h>
 
 std::string generate_body(fty_proto_t* alert, const std::string& priority, const std::string& extname);
 
@@ -32,4 +32,4 @@ std::string getIpAddr();
 
 void emailconfiguration_test(bool verbose);
 
-// EMAILCONFIGURATION_H_INCLUDED
+

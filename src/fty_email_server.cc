@@ -19,12 +19,7 @@
     =========================================================================
 */
 
-/*
-@header
-    fty_email_server - Email actor
-@discuss
-@end
-*/
+/// Email actor
 
 #include "fty_email_server.h"
 #include "email.h"
@@ -38,6 +33,7 @@
 #include <fty_common_translation.h>
 #include <set>
 #include <tuple>
+
 static void s_notify(
     Smtp& smtp, const std::string& priority, const std::string& extname, const std::string& contact, fty_proto_t* alert)
 {
@@ -51,12 +47,12 @@ static void s_notify(
         smtp.sendmail(contact, generate_subject(alert, priority, extname), generate_body(alert, priority, extname));
 }
 
-// return dfl is item is NULL or empty string!!
-// smtp
-//  user
-//  password = ""
-//
-// will be treated the same way
+/// return dfl is item is NULL or empty string!!
+/// smtp
+///  user
+///  password = ""
+///
+/// will be treated the same way
 static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
 {
     assert(config);
