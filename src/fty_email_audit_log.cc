@@ -21,41 +21,39 @@
 
 /*
 @header
-    fty_email_audit_log - Manage alerts audit log
+    fty_email_audit_log - Manage audit log
 @discuss
 @end
 */
 
 #include "fty_email_audit_log.h"
-#include "fty_email.h"
 
-Ftylog *EmailAuditLogManager::_emailauditlog = nullptr;
+Ftylog* AuditLogManager::_auditLogger = nullptr;
 
 //  init audit logger
-void EmailAuditLogManager::init (const char* configLogFile)
+void AuditLogManager::init()
 {
-    if (!_emailauditlog)
-    {
-        _emailauditlog = ftylog_new ("email-audit", configLogFile);
+    if (!_auditLogger) {
+        const char* loggerName = "audit/email";
+        _auditLogger = ftylog_new(loggerName, FTY_COMMON_LOGGING_DEFAULT_CFG);
+        if (!_auditLogger) {
+            log_error("Audit logger creation failed (%s, %s)",
+                loggerName, FTY_COMMON_LOGGING_DEFAULT_CFG);
+        }
     }
 }
 
 //  deinit audit logger
-void EmailAuditLogManager::deinit ()
+void AuditLogManager::deinit()
 {
-    if (_emailauditlog)
-    {
-        ftylog_delete(_emailauditlog);
-        _emailauditlog = nullptr;
+    if (_auditLogger) {
+        ftylog_delete(_auditLogger);
+        _auditLogger = nullptr;
     }
 }
 
-//  return alerts audit logger
-Ftylog* EmailAuditLogManager::getInstance ()
+//  return audit logger instance
+Ftylog* AuditLogManager::getInstance()
 {
-    if (!_emailauditlog)
-    {
-        init(DEFAULT_LOG_CONFIG);
-    }
-    return _emailauditlog;
+    return _auditLogger;
 }

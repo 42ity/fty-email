@@ -76,10 +76,7 @@ etn_configure_file(
     DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME}
 )
 
-# Agent log config
-install(FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}-log.cfg DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/${PROJECT_NAME})
-
-#systemd-tmpfiles
+# systemd service
 etn_configure_file(
     src/conf/${PROJECT_NAME}.service.in
 
@@ -87,7 +84,7 @@ etn_configure_file(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/
 )
 
-# .conf etc/
+# .conf > lib/tmpfiles.d/
 install(
     FILES ${PROJECT_SOURCE_DIR}/src/conf/${PROJECT_NAME}.conf
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/tmpfiles.d/

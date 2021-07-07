@@ -19,49 +19,36 @@
     =========================================================================
 */
 
-#ifndef FTY_EMAIL_AUDIT_LOG_H_INCLUDED
-#define FTY_EMAIL_AUDIT_LOG_H_INCLUDED
-
-#ifndef __cplusplus
-    #define __cplusplus
-#endif
+#pragma once
 
 #include <fty_log.h>
 
 /* Prints message in Audit Log with DEBUG level. */
-#define log_debug_email_audit(...) \
-        log_debug_log(EmailAuditLogManager::getInstance(), __VA_ARGS__);
+#define log_debug_email_audit(...) log_debug_log(AuditLogManager::getInstance(), __VA_ARGS__);
 
 /* Prints message in Audit Log with INFO level. */
-#define log_info_email_audit(...) \
-        log_info_log(EmailAuditLogManager::getInstance(), __VA_ARGS__);
+#define log_info_email_audit(...) log_info_log(AuditLogManager::getInstance(), __VA_ARGS__);
 
 /* Prints message in Audit Log with WARNING level*/
-#define log_warning_email_audit(...) \
-        log_warning_log(EmailAuditLogManager::getInstance(), __VA_ARGS__);
+#define log_warning_email_audit(...) log_warning_log(AuditLogManager::getInstance(), __VA_ARGS__);
 
 /* Prints message in Audit Log with ERROR level*/
-#define log_error_email_audit(...) \
-        log_error_log(EmailAuditLogManager::getInstance(), __VA_ARGS__);
+#define log_error_email_audit(...) log_error_log(AuditLogManager::getInstance(), __VA_ARGS__);
 
 /* Prints message in Audit Log with FATAL level. */
-#define log_fatal_alarms_engine_audit(...) \
-        log_fatal_log(AlertsEngineAuditLogManager::getInstance(), __VA_ARGS__);
+#define log_fatal_email_audit(...) log_fatal_log(AuditLogManager::getInstance(), __VA_ARGS__);
 
-//singleton for logger management
-class EmailAuditLogManager
+// singleton for audit logger management
+class AuditLogManager
 {
 private:
-    EmailAuditLogManager () = default;
-    ~EmailAuditLogManager () = default;
-    static Ftylog *_emailauditlog;
+    AuditLogManager()  = default;
+    ~AuditLogManager() = default;
+    static Ftylog* _auditLogger;
 
 public:
-
     // Return singleton Audit Ftylog instance
-    static Ftylog* getInstance ();
-    static void init (const char* configLogFile);
-    static void deinit ();
+    static Ftylog* getInstance();
+    static void    init();
+    static void    deinit();
 };
-
-#endif
