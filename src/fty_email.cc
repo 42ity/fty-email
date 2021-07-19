@@ -199,7 +199,7 @@ int main(int argc, char** argv)
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
 
     // initialize log for auditability
-    AuditLogManager::init();
+    AuditLogManager::init(FTY_EMAIL_ADDRESS);
 
     puts("START fty-email - Daemon that is responsible for email notification about alerts");
 

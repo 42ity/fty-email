@@ -10,7 +10,7 @@
 TEST_CASE("email_test")
 {
     ManageFtyLog::setInstanceFtylog("email_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
-    AuditLogManager::init();
+    AuditLogManager::init("email_test");
 
     // test case 01 - normal operation
     std::string to = sms_email_address("0#####@hyper.mobile", "+79 (0) 123456");

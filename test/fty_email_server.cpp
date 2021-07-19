@@ -13,7 +13,7 @@
 TEST_CASE("fty_email_server_test")
 {
     ManageFtyLog::setInstanceFtylog("fty_email_server_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
-    AuditLogManager::init();
+    AuditLogManager::init("fty_email_server_test");
 
     // logs audit, see /etc/fty/ftylog.cfg (requires privileges)
     log_debug_email_audit("fty-email-test audit test %s", "DEBUG");
