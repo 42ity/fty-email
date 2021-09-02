@@ -18,6 +18,3 @@ malamute = ""
     verbose = "false"
     endpoint = "ipc://@/malamute"
     address = "fty-email"
-log = ""
-    config = "/etc/fty-email/fty-email-log.cfg"
-

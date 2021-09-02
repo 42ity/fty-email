@@ -1,6 +1,8 @@
 #include "src/fty_email_server.h"
 #include "src/emailconfiguration.h"
 #include "src/fty_email.h"
+#include "src/fty_email_audit_log.h"
+
 #include <catch2/catch.hpp>
 #include <fty/convert.h>
 #include <fty_common_mlm.h>
@@ -10,6 +12,17 @@
 
 TEST_CASE("fty_email_server_test")
 {
+    ManageFtyLog::setInstanceFtylog("fty_email_server_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
+    AuditLogManager::init("fty_email_server_test");
+
+    // logs audit, see /etc/fty/ftylog.cfg (requires privileges)
+    log_debug_email_audit("fty-email-test audit test %s", "DEBUG");
+    log_info_email_audit("fty-email-test audit test %s", "INFO");
+    log_warning_email_audit("fty-email-test audit test %s", "WARNING");
+    log_error_email_audit("fty-email-test audit test %s", "ERROR");
+    log_fatal_email_audit("fty-email-test audit test %s", "FATAL");
+    //AuditLogManager::deinit(); return;
+
     int rv = translation_initialize(FTY_EMAIL_ADDRESS, "test/conf", "test_");
     if (rv != TE_OK)
         log_warning("Translation not initialized");
@@ -461,5 +474,6 @@ TEST_CASE("fty_email_server_test")
     zstr_free(&pidfile);
     zstr_free(&smtpcfg_file);
 
+    AuditLogManager::deinit();
     printf("OK\n");
 }

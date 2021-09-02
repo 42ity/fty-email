@@ -37,7 +37,6 @@ char*      config_file      = nullptr;
 zconfig_t* config           = nullptr;
 char*      language         = nullptr;
 char*      translation_path = nullptr;
-char*      log_config       = nullptr;
 
 void usage()
 {
@@ -82,14 +81,15 @@ int main(int argc, char** argv)
     char* msmtp_path   = getenv("_MSMTP_PATH_");
     char* smsgateway   = getenv("BIOS_SMTP_SMS_GATEWAY");
     char* smtpverify   = getenv("BIOS_SMTP_VERIFY_CA");
-    ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS);
+
+    ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
     int rv = translation_initialize(FTY_EMAIL_ADDRESS, TRANSLATION_ROOT, TRANSLATION_PREFIX);
     if (rv != TE_OK)
         log_warning("Translation not initialized");
 
     // get options
-    int c;
+
 // Some systems define struct option with non-"const" "char *"
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic push
@@ -104,6 +104,7 @@ int main(int argc, char** argv)
 #pragma GCC diagnostic pop
 #endif
 
+    int c;
     while (true) {
 
         int option_index = 0;
@@ -172,9 +173,7 @@ int main(int argc, char** argv)
 
         zconfig_put(config, "malamute/endpoint", FTY_EMAIL_ENDPOINT);
         zconfig_put(config, "malamute/address", FTY_EMAIL_ADDRESS);
-        zconfig_put(config, "log/config", DEFAULT_LOG_CONFIG);
 
-        strcpy(log_config, DEFAULT_LOG_CONFIG);
         zconfig_print(config);
 
         config_file = strdup(FTY_EMAIL_CONFIG_FILE);
@@ -188,24 +187,19 @@ int main(int argc, char** argv)
         if (!config) {
             log_error("Failed to load config file %s: %m", config_file);
             exit(EXIT_FAILURE);
-        } else {
-            language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
-            rv       = translation_change_language(language);
-            if (rv != TE_OK)
-                log_warning("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
         }
-    }
-    if (language) {
-        log_config = zconfig_get (config, "log/config", DEFAULT_LOG_CONFIG);
-    }
-    if (log_config) {
-        ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
 
-        // initialize log for auditability
-        EmailAuditLogManager::init(log_config);
+        language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
+        rv       = translation_change_language(language);
+        if (rv != TE_OK)
+            log_warning("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
     }
+
     if (verbose)
-        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+        ManageFtyLog::getInstanceFtylog()->setVerboseMode();
+
+    // initialize log for auditability
+    AuditLogManager::init(FTY_EMAIL_ADDRESS);
 
     puts("START fty-email - Daemon that is responsible for email notification about alerts");
 
@@ -242,6 +236,7 @@ int main(int argc, char** argv)
     zstr_free(&config_file);
 
     // release audit context
-    EmailAuditLogManager::deinit();
+    AuditLogManager::deinit();
+
     return 0;
 }

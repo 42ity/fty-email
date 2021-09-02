@@ -56,16 +56,16 @@ void usage()
 
 int main(int argc, char** argv)
 {
-
     int                      help    = 0;
     int                      verbose = 0;
     std::vector<std::string> attachments;
     const char*              recipient = nullptr;
     std::string              subj;
-    ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS_SENDMAIL_ONLY);
+
+    ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS_SENDMAIL_ONLY, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
     // get options
-    int c;
+
 // Some systems define struct option with non-"const" "char *"
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic push
@@ -81,6 +81,7 @@ int main(int argc, char** argv)
 
     char* config_file = nullptr;
     char* p           = nullptr;
+    int c;
 
     while (true) {
 
@@ -116,10 +117,12 @@ int main(int argc, char** argv)
                 break;
         }
     }
+
     if (optind < argc) {
         recipient = argv[optind];
         ++optind;
     }
+
     if (help || recipient == nullptr || optind < argc) {
         usage();
         exit(1);
@@ -128,7 +131,7 @@ int main(int argc, char** argv)
 
     char* endpoint     = strdup(FTY_EMAIL_ENDPOINT);
     char* smtp_address = strdup(FTY_EMAIL_ADDRESS);
-    char* log_config   = strdup(DEFAULT_LOG_CONFIG);
+
     if (config_file) {
         zconfig_t* config = zconfig_load(config_file);
         if (!config) {
@@ -144,26 +147,24 @@ int main(int argc, char** argv)
             zstr_free(&smtp_address);
             smtp_address = strdup(zconfig_get(config, "malamute/address", nullptr));
         }
-        if (zconfig_get(config, "log/config", nullptr)) {
-            zstr_free(&log_config);
-            log_config = strdup(zconfig_get(config, "log/config", nullptr));
-        }
 
         zconfig_destroy(&config);
     }
-    ManageFtyLog::getInstanceFtylog()->setConfigFile(std::string(log_config));
-    zstr_free(&log_config);
+
     if (verbose)
-        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
+        ManageFtyLog::getInstanceFtylog()->setVerboseMode();
 
     mlm_client_t* client  = mlm_client_new();
     char*         address = zsys_sprintf("fty-sendmail.%d", getpid());
     int           r       = mlm_client_connect(client, endpoint, 1000, address);
-    assert(r != -1);
     log_debug("fty-sendmail:\tendpoint=%s, address=%s, smtp_address=%s", endpoint, address, smtp_address);
     zstr_free(&address);
     zstr_free(&endpoint);
-    assert(r != -1);
+
+    if (r == -1) {
+        log_error("fty-sendmail:\tFailed to connect");
+        exit(EXIT_FAILURE);
+    }
 
     std::istreambuf_iterator<char> begin(std::cin), end;
     std::string body(begin, end);

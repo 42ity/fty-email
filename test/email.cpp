@@ -1,12 +1,17 @@
 #include "src/email.h"
 #include "src/emailconfiguration.h"
 #include "src/fty_email_server.h"
+#include "src/fty_email_audit_log.h"
+
 #include <catch2/catch.hpp>
 #include <fstream>
 #include <fty_log.h>
 
 TEST_CASE("email_test")
 {
+    ManageFtyLog::setInstanceFtylog("email_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
+    AuditLogManager::init("email_test");
+
     // test case 01 - normal operation
     std::string to = sms_email_address("0#####@hyper.mobile", "+79 (0) 123456");
     CHECK(to == "023456@hyper.mobile");
@@ -61,4 +66,6 @@ TEST_CASE("email_test")
     zstr_free(&uuid);
     std::string email = smtp.msg2email(&email_msg);
     log_debug("E M A I L:=\n%s\n", email.c_str());
+
+    AuditLogManager::deinit();
 }
