@@ -124,6 +124,8 @@ void fty_email_server(zsock_t* pipe, void* args)
     std::set<std::tuple<std::string, std::string>> streams;
     bool                                           producer = false;
 
+    log_info("fty_email_server started (sendmail_only: %s)", (sendmail_only ? "true" : "false"));
+
     zsock_signal(pipe, 0);
     while (!zsys_interrupted) {
 
@@ -336,7 +338,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                     } else {
                         zmsg_print(zmessage);
                         auto mail = smtp.msg2email(&zmessage);
-                        log_debug(mail.c_str());
+                        log_debug("%s:\tSend email: %s", name, mail.c_str());
                         log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
                         smtp.sendmail(mail);
                     }
@@ -351,6 +353,8 @@ void fty_email_server(zsock_t* pipe, void* args)
                     zmsg_addstrf(reply, "%" PRIu32, code);
                     zmsg_addstr(reply, UTF8::escape(re.what()).c_str());
                 }
+
+                log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
                 if (sent_ok) {
                     log_info_email_audit("%s: Send email ok", name);
                 }
@@ -389,6 +393,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                     zmsg_addstr(reply, "ERROR");
                     zmsg_addstr(reply, re.what());
                 }
+                log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
                 if (sent_ok) {
                     log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s)",
                         name, gateway.c_str(), audit_contact.c_str(), extname ? extname : "");
@@ -409,6 +414,8 @@ void fty_email_server(zsock_t* pipe, void* args)
             continue;
         }
     }
+
+    log_info("%s:\tfty_email_server ended", name);
 
     zstr_free(&name);
     zstr_free(&endpoint);
