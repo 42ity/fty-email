@@ -129,10 +129,12 @@ int main(int argc, char** argv)
     }
     // end of the options
 
-    char* endpoint     = strdup(FTY_EMAIL_ENDPOINT);
-    char* smtp_address = strdup(FTY_EMAIL_ADDRESS);
+    char* endpoint = strdup(FTY_EMAIL_ENDPOINT); // mlm endpouint
+    char* smtp_address = strdup(FTY_EMAIL_ADDRESS); // fty-email agent
+    char* address = zsys_sprintf("fty-sendmail.%d", getpid()); // client
 
     if (config_file) {
+        log_debug("Loading conf. file (%s)", config_file);
         zconfig_t* config = zconfig_load(config_file);
         if (!config) {
             log_error("Failed to load %s: %m", config_file);
@@ -154,53 +156,76 @@ int main(int argc, char** argv)
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
 
-    mlm_client_t* client  = mlm_client_new();
-    char*         address = zsys_sprintf("fty-sendmail.%d", getpid());
-    int           r       = mlm_client_connect(client, endpoint, 1000, address);
-    log_debug("fty-sendmail:\tendpoint=%s, address=%s, smtp_address=%s", endpoint, address, smtp_address);
-    zstr_free(&address);
+    mlm_client_t* client = mlm_client_new();
+    int r = mlm_client_connect(client, endpoint, 1000, address);
+
+    log_debug("endpoint='%s', address='%s', smtp_address='%s'", endpoint, address, smtp_address);
+
+    zstr_free(&address); // useless for now
     zstr_free(&endpoint);
 
     if (r == -1) {
-        log_error("fty-sendmail:\tFailed to connect");
+        log_error("Failed to connect.");
+
+        mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
 
+    log_debug("Encoding email...");
+
     std::istreambuf_iterator<char> begin(std::cin), end;
     std::string body(begin, end);
-    zmsg_t*     mail = fty_email_encode("UUID", recipient, subj.c_str(), nullptr, body.c_str(), nullptr);
+    zmsg_t* mail = fty_email_encode("UUID", recipient, subj.c_str(), nullptr, body.c_str(), nullptr);
 
     for (const auto& file : attachments) {
         zmsg_addstr(mail, file.c_str());
     }
-
     zmsg_print(mail);
-    r = mlm_client_sendto(client, smtp_address, "SENDMAIL", nullptr, 2000, &mail);
-    zstr_free(&smtp_address);
-    if (r == -1) {
-        log_error("Failed to send the email (mlm_client_sendto returned -1).");
-        zmsg_destroy(&mail);
-        mlm_client_destroy(&client);
 
+    log_debug("Sending email (smtp_address: '%s')...", smtp_address);
+
+    r = mlm_client_sendto(client, smtp_address, "SENDMAIL", nullptr, 2000, &mail);
+
+    log_trace("mlm_client_sendto(), r: %d", r);
+
+    zstr_free(&smtp_address); // useless for now
+    zmsg_destroy(&mail);
+
+    if (r != 0) {
+        log_error("Failed to send the email (mlm_client_sendto() returned %d)", r);
+
+        mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
 
+    log_trace("mlm_client_recv()...");
     zmsg_t* msg = mlm_client_recv(client);
+    if (msg == NULL) {
+        log_error("Recv response is NULL.");
 
-    char* uuid      = zmsg_popstr(msg);
-    char* code      = zmsg_popstr(msg);
-    char* reason    = zmsg_popstr(msg);
-    int   exit_code = EXIT_SUCCESS;
-    if (code[0] != '0')
+        mlm_client_destroy(&client);
+        exit(EXIT_FAILURE);
+    }
+
+    char* uuid = zmsg_popstr(msg);
+    char* code = zmsg_popstr(msg);
+    char* reason = zmsg_popstr(msg);
+    zmsg_destroy(&msg);
+
+    int exit_code = EXIT_SUCCESS; // default
+    if (!code || (code[0] != '0')) {
         exit_code = EXIT_FAILURE;
+    }
 
-    if (exit_code == EXIT_FAILURE)
-        log_debug("subject: %s, \ncode: %s \nreason: %s", mlm_client_subject(client), code, reason);
+    log_debug("%s (subject: '%s', code: '%s',  reason: '%s')",
+        (exit_code == EXIT_FAILURE ? "Failure" : "Success"),
+        mlm_client_subject(client), code, reason);
 
     zstr_free(&code);
     zstr_free(&reason);
     zstr_free(&uuid);
     mlm_client_destroy(&client);
 
+    log_debug("Done");
     exit(exit_code);
 }
