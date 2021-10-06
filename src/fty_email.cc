@@ -201,7 +201,7 @@ int main(int argc, char** argv)
     // initialize log for auditability
     AuditLogManager::init(FTY_EMAIL_ADDRESS);
 
-    puts("START fty-email - Daemon that is responsible for email notification about alerts");
+    log_info("START fty-email - Daemon that is responsible for email notification about alerts");
 
     zactor_t* smtp_server = zactor_new(fty_email_server, nullptr);
     if (!smtp_server) {
@@ -212,8 +212,8 @@ int main(int argc, char** argv)
     // new actor with "sendmail-only"
     zactor_t* send_mail_only_server;
     {
-        std::string s("sendmail-only");
-        send_mail_only_server = zactor_new(fty_email_server, static_cast<void*>(&s));
+        const char* s = "sendmail-only";
+        send_mail_only_server = zactor_new(fty_email_server, const_cast<char*>(s));
     }
     if (!send_mail_only_server) {
         log_error("send_mail_only_server: cannot start the daemon");
