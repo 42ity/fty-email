@@ -34,9 +34,12 @@
 
 // hack to allow reload of config file w/o the need to rewrite server to zloop and reactors
 char*      config_file      = nullptr;
-zconfig_t* config           = nullptr;
 char*      language         = nullptr;
 char*      translation_path = nullptr;
+
+zconfig_t* config = nullptr;
+zactor_t* smtp_server = nullptr;
+zactor_t* send_mail_only_server = nullptr;
 
 void usage()
 {
@@ -56,14 +59,21 @@ void usage()
         "Command line option takes precedence over variable.");
 }
 
-
-static int s_timer_event(zloop_t* /* loop */, int /* timer_id */, void* output)
+static int s_timer_event(zloop_t* /* loop */, int /* timer_id */, void* /* output */)
 {
+    // assume config & config_file are set
     if (zconfig_has_changed(config)) {
         log_info("Content of %s have changed, reload it", config_file);
         zconfig_reload(&config);
-        zstr_sendx(output, "LOAD", config_file, nullptr);
+
+        if (send_mail_only_server) {
+            zstr_sendx(send_mail_only_server, "LOAD", config_file, nullptr);
+        }
+        if (smtp_server) {
+            zstr_sendx(smtp_server, "LOAD", config_file, nullptr);
+        }
     }
+
     return 0;
 }
 
@@ -198,41 +208,51 @@ int main(int argc, char** argv)
     if (verbose)
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
 
-    // initialize log for auditability
-    AuditLogManager::init(FTY_EMAIL_ADDRESS);
-
     log_info("START fty-email - Daemon that is responsible for email notification about alerts");
 
-    zactor_t* smtp_server = zactor_new(fty_email_server, nullptr);
+    smtp_server = zactor_new(fty_email_server, nullptr);
     if (!smtp_server) {
         log_error("smtp_server: cannot start the daemon");
         return -1;
     }
 
     // new actor with "sendmail-only"
-    zactor_t* send_mail_only_server;
     {
         const char* s = "sendmail-only";
         send_mail_only_server = zactor_new(fty_email_server, const_cast<char*>(s));
     }
     if (!send_mail_only_server) {
         log_error("send_mail_only_server: cannot start the daemon");
+        zactor_destroy(&smtp_server);
         return -1;
     }
+
+    // initialize log for auditability
+    AuditLogManager::init(FTY_EMAIL_ADDRESS);
 
     zstr_sendx(smtp_server, "LOAD", config_file, nullptr);
     zstr_sendx(send_mail_only_server, "LOAD", config_file, nullptr);
 
+    // monitor configuration changes
     zloop_t* check_config = zloop_new();
-    // as 5 minutes is the smallest possible reaction time
-    zloop_timer(check_config, 1000, 0, s_timer_event, smtp_server);
+    zloop_timer(check_config, 1000, 0, s_timer_event, nullptr);
     zloop_start(check_config);
+
+    // Main loop, accept any message back from server
+    // copy from src/malamute.c under MPL license
+    while (!zsys_interrupted) {
+        char* msg = zstr_recv(smtp_server);
+        if (msg == 0)
+            break;
+        log_trace("%s: recv msg '%s'", "fty-email", msg);
+        zstr_free(&msg);
+    }
 
     zloop_destroy(&check_config);
     zactor_destroy(&smtp_server);
     zactor_destroy(&send_mail_only_server);
-    zstr_free(&translation_path);
     zconfig_destroy(&config);
+    zstr_free(&translation_path);
     zstr_free(&config_file);
 
     // release audit context

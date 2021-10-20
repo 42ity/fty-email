@@ -182,11 +182,15 @@ void fty_email_server(zsock_t* pipe, void* args)
 
                 const char* encryption = zconfig_get(config, "smtp/encryption", "NONE");
                 if (strcasecmp(encryption, "none") == 0 || strcasecmp(encryption, "tls") == 0 ||
-                    strcasecmp(encryption, "starttls") == 0)
+                    strcasecmp(encryption, "starttls") == 0) {
                     smtp.encryption(encryption);
-                else
+                }
+                else {
                     log_warning("(agent-smtp): smtp/encryption has unknown value, got %s, expected (NONE|TLS|STARTTLS)",
                         encryption);
+                    log_warning("(agent-smtp): smtp/encryption set to 'NONE'");
+                    smtp.encryption("none");
+                }
 
                 if (streq(s_get(config, "smtp/use_auth", "false"), "true")) {
                     if (s_get(config, "smtp/user", NULL)) {
