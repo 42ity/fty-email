@@ -234,6 +234,10 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     body += popString(msg);
 
     mime.setHeader("To", to);
+    
+    if(subject.empty()) {
+        subject = "No Subject";
+    }
     mime.setHeader("Subject", subject);
     mime.addObject(body);
 
