@@ -103,6 +103,32 @@ zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, 
     return msg;
 }
 
+// make the message more human readable (displayed in UI)
+static std::string humanReadableErrorMessage(const std::string& msg)
+{
+    // tokens substitution (in order)
+    struct {
+        std::string occurency;
+        std::string substitute;
+    } const tokens[] = {
+        {"\n\n", ". "},
+        {"\n", ""},
+        {"stderr: ", ""},
+        {"/usr/bin/msmtp", "msmtp"},
+        {"msmtp", " Command"},
+    };
+
+    std::string aux{msg};
+    for (auto& token : tokens) {
+        std::size_t pos;
+        while((pos = aux.find(token.occurency)) != std::string::npos) {
+            aux.replace(pos, token.occurency.length(), token.substitute);
+        }
+    }
+
+    return aux;
+}
+
 void fty_email_server(zsock_t* pipe, void* args)
 {
     bool  sendmail_only    = (args && streq(static_cast<char*>(args), "sendmail-only"));
@@ -355,7 +381,8 @@ void fty_email_server(zsock_t* pipe, void* args)
                     sent_ok       = false;
                     uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
                     zmsg_addstrf(reply, "%" PRIu32, code);
-                    zmsg_addstr(reply, UTF8::escape(re.what()).c_str());
+                    auto errMsg = humanReadableErrorMessage(re.what());
+                    zmsg_addstr(reply, UTF8::escape(errMsg.c_str()).c_str());
                 }
 
                 log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
