@@ -194,7 +194,7 @@ void Smtp::sendmail(const std::string& data) const
         log_warning("Email truncated");
     }
 
-    auto ret = proc.wait();
+    auto ret = proc.wait(50000);
     deleteConfigFile(cfg);
     if (!ret) {
         throw std::runtime_error("{} wait with '{}'"_format(_msmtp, ret.error()));
