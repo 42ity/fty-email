@@ -337,12 +337,13 @@ void fty_email_server(zsock_t* pipe, void* args)
             log_debug("%s:\tzmessage is NULL", name);
             continue;
         }
+        std::string from = mlm_client_sender(client);
         std::string topic = mlm_client_subject(client);
 
         // TODO add SMTP settings
-        if (streq(mlm_client_command(client), "MAILBOX DELIVER")) {
-
-            log_debug("%s:\tMAILBOX DELIVER, subject=%s", name, mlm_client_subject(client));
+        if (streq(mlm_client_command(client), "MAILBOX DELIVER"))
+        {
+            log_debug("%s:\tMAILBOX DELIVER, from=%s, subject=%s", name, from.c_str(), topic.c_str());
 
             char* uuid = zmsg_popstr(zmessage);
             if (!uuid) {
@@ -352,10 +353,11 @@ void fty_email_server(zsock_t* pipe, void* args)
             }
 
             zmsg_t* reply = zmsg_new();
-            zmsg_addstr(reply, uuid);
+            zmsg_addstr(reply, uuid); // common first frame of reply
             zstr_free(&uuid);
 
-            if (topic == "SENDMAIL") {
+            if (topic == "SENDMAIL")
+            {
                 bool sent_ok = false;
                 try {
                     if (zmsg_size(zmessage) == 1) {
@@ -372,34 +374,46 @@ void fty_email_server(zsock_t* pipe, void* args)
                         log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
                         smtp.sendmail(mail);
                     }
+
                     zmsg_addstr(reply, "0");
                     zmsg_addstr(reply, "OK");
                     sent_ok = true;
-                } catch (const std::runtime_error& re) {
+                }
+                catch (const std::runtime_error& re) {
                     log_debug("%s:\tgot std::runtime_error, e.what ()=%s", name, re.what());
                     log_error_email_audit("%s: Send email error: %s", name, re.what ());
-                    sent_ok       = false;
+
                     uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
-                    zmsg_addstrf(reply, "%" PRIu32, code);
                     auto errMsg = humanReadableErrorMessage(re.what());
+
+                    zmsg_addstrf(reply, "%" PRIu32, code);
                     zmsg_addstr(reply, UTF8::escape(errMsg.c_str()).c_str());
+                    sent_ok = false;
                 }
 
                 log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
                 if (sent_ok) {
                     log_info_email_audit("%s: Send email ok", name);
                 }
-                int r = mlm_client_sendto(
-                    client, mlm_client_sender(client), sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR", NULL, 1000, &reply);
-                if (r == -1)
+
+                int r = mlm_client_sendto(client, mlm_client_sender(client),
+                    sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR", NULL, 1000, &reply);
+                if (r == -1) {
                     log_error("Can't send a reply for SENDMAIL to %s", mlm_client_sender(client));
-            } else if (topic == "SENDMAIL_ALERT" || topic == "SENDSMS_ALERT") {
+                }
+            }
+            else if (topic == "SENDMAIL_ALERT" || topic == "SENDSMS_ALERT")
+            {
                 char*        priority          = zmsg_popstr(zmessage);
                 char*        extname           = zmsg_popstr(zmessage);
                 char*        contact           = zmsg_popstr(zmessage);
                 fty_proto_t* alert             = fty_proto_decode(&zmessage);
+                const char*  rule              = alert ? fty_proto_rule(alert) : "";
+
+                log_debug("alert (rule: %s, extname: %s, contact: %s)", rule, extname, contact);
+
                 std::string  gateway           = gw_template == NULL ? "" : gw_template;
-                std::string  converted_contact = contact == NULL ? "" : contact;
+                std::string  converted_contact = contact ? contact : "";
                 std::string audit_contact = converted_contact;
                 bool sent_ok = false;
                 try {
@@ -412,33 +426,43 @@ void fty_email_server(zsock_t* pipe, void* args)
                     } else {
                         s_notify(smtp, priority, extname, converted_contact, alert);
                     }
+
                     zmsg_addstr(reply, "OK");
                     sent_ok = true;
-                } catch (const std::exception& re) {
+                }
+                catch (const std::exception& re) {
                     log_error("Sending of e-mail/SMS alert failed : %s", re.what());
                     if (!audit_contact.empty()) {
                         // Workaround for unwanted logs: log audit only if contact is not empty
-                        log_error_email_audit("%s: Send email/SMS alert error (gateway=%s contact=%s extname=%s): %s",
-                            name, gateway.c_str(), audit_contact.c_str(), extname ? extname : "", re.what ());
+                        log_error_email_audit("%s: Send email/SMS alert error (gateway=%s contact=%s extname=%s alert=%s): %s",
+                            name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule, re.what ());
                     }
+
                     zmsg_addstr(reply, "ERROR");
                     zmsg_addstr(reply, re.what());
+                    sent_ok = false;
                 }
+
                 log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
                 if (sent_ok) {
-                    log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s)",
-                        name, gateway.c_str(), audit_contact.c_str(), extname ? extname : "");
+                    log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s alert=%s)",
+                        name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule);
                 }
-                int r = mlm_client_sendto(client, mlm_client_sender(client),
-                    (topic == "SENDMAIL_ALERT") ? "SENDMAIL_ALERT" : "SENDSMS_ALERT", NULL, 1000, &reply);
-                if (r == -1)
+
+                int r = mlm_client_sendto(client, mlm_client_sender(client), topic.c_str(), NULL, 1000, &reply);
+                if (r == -1) {
                     log_error("Can't send a reply for SENDMAIL_ALERT to %s", mlm_client_sender(client));
+                }
+
                 fty_proto_destroy(&alert);
                 zstr_free(&contact);
                 zstr_free(&extname);
                 zstr_free(&priority);
-            } else
+            }
+            else
+            {
                 log_warning("%s:\tUnknown subject %s", name, topic.c_str());
+            }
 
             zmsg_destroy(&reply);
             zmsg_destroy(&zmessage);
