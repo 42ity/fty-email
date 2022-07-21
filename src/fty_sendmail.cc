@@ -141,32 +141,34 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
-        if (zconfig_get(config, "malamute/endpoint", nullptr)) {
+        char* aux = zconfig_get(config, "malamute/endpoint", nullptr);
+        if (aux) {
             zstr_free(&endpoint);
-            endpoint = strdup(zconfig_get(config, "malamute/endpoint", nullptr));
+            endpoint = strdup(aux);
         }
-        if (zconfig_get(config, "malamute/address", nullptr)) {
+        aux = zconfig_get(config, "malamute/address", nullptr);
+        if (aux) {
             zstr_free(&smtp_address);
-            smtp_address = strdup(zconfig_get(config, "malamute/address", nullptr));
+            smtp_address = strdup(aux);
         }
 
         zconfig_destroy(&config);
     }
 
-    if (verbose)
+    if (verbose) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
-
-    mlm_client_t* client = mlm_client_new();
-    int r = mlm_client_connect(client, endpoint, 1000, address);
+    }
 
     log_debug("endpoint='%s', address='%s', smtp_address='%s'", endpoint, address, smtp_address);
 
-    zstr_free(&address); // useless for now
+    mlm_client_t* client = mlm_client_new();
+    int r = mlm_client_connect(client, endpoint, 1000, address);
+    zstr_free(&address);
     zstr_free(&endpoint);
 
     if (r == -1) {
         log_error("Failed to connect.");
-
+        zstr_free(&smtp_address);
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
@@ -185,24 +187,25 @@ int main(int argc, char** argv)
     log_debug("Sending email (smtp_address: '%s')...", smtp_address);
 
     r = mlm_client_sendto(client, smtp_address, "SENDMAIL", nullptr, 2000, &mail);
+    zmsg_destroy(&mail);
+    zstr_free(&smtp_address);
 
     log_trace("mlm_client_sendto(), r: %d", r);
 
-    zstr_free(&smtp_address); // useless for now
-    zmsg_destroy(&mail);
-
     if (r != 0) {
         log_error("Failed to send the email (mlm_client_sendto() returned %d)", r);
-
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
 
     log_trace("mlm_client_recv()...");
-    zmsg_t* msg = mlm_client_recv(client);
+
+    zpoller_t* poller = zpoller_new(mlm_client_msgpipe(client), NULL);
+    zmsg_t* msg = (poller && zpoller_wait(poller, 20000)) ? mlm_client_recv(client) : NULL;
+    zpoller_destroy(&poller);
+
     if (msg == NULL) {
         log_error("Recv response is NULL.");
-
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
