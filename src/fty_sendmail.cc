@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 
     if (r == -1) {
         log_error("Failed to connect.");
-
+        zstr_free(&smtp_address);
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
@@ -199,7 +199,11 @@ int main(int argc, char** argv)
     }
 
     log_trace("mlm_client_recv()...");
-    zmsg_t* msg = mlm_client_recv(client);
+
+    zpoller_t* poller = zpoller_new(mlm_client_msgpipe(client), NULL);
+    zmsg_t* msg = (poller && zpoller_wait(poller, 20000)) ? mlm_client_recv(client) : NULL;
+    zpoller_destroy(&poller);
+
     if (msg == NULL) {
         log_error("Recv response is NULL.");
 
