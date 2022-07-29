@@ -468,6 +468,8 @@ void fty_email_server(zsock_t* pipe, void* args)
             zmsg_destroy(&zmessage);
             continue;
         }
+
+        zmsg_destroy(&zmessage);
     }
 
     log_info("%s:\tfty_email_server ended", name);
