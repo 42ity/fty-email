@@ -26,6 +26,7 @@
 #include "emailconfiguration.h"
 #include "fty_email.h"
 #include "fty_email_audit_log.h"
+#include "fty_common_quote_codec.h"
 #include <algorithm>
 #include <fty/convert.h>
 #include <fty_common_macros.h>
@@ -60,6 +61,10 @@ static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
     char* ret = zconfig_get(config, key, dfl);
     if (!ret || streq(ret, ""))
         return dfl;
+
+    if (streq(key, "smtp/user") || streq(key, "smtp/password")) {
+        return quoteDecode(std::string(ret)).c_str();
+    }
     return ret;
 }
 
