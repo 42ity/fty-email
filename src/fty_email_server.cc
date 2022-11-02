@@ -223,11 +223,11 @@ void fty_email_server(zsock_t* pipe, void* args)
                 if (streq(s_get(config, "smtp/use_auth", "false"), "true")) {
                     if (s_get(config, "smtp/user", NULL)) {
                         std::string user(s_get(config, "smtp/user", NULL));
-                        smtp.username(quoteDecode(user));
+                        smtp.username(quotecodec::quoteDecode(user));
                     }
                     if (s_get(config, "smtp/password", NULL)) {
                         std::string pass(s_get(config, "smtp/password", NULL));
-                        smtp.password(quoteDecode(pass));
+                        smtp.password(quotecodec::quoteDecode(pass));
                     }
                 }
 
