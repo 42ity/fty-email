@@ -26,6 +26,7 @@
 #include "emailconfiguration.h"
 #include "fty_email.h"
 #include "fty_email_audit_log.h"
+#include <fty_common_quote_codec.h>
 #include <algorithm>
 #include <fty/convert.h>
 #include <fty_common_macros.h>
@@ -60,6 +61,7 @@ static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
     char* ret = zconfig_get(config, key, dfl);
     if (!ret || streq(ret, ""))
         return dfl;
+        
     return ret;
 }
 
@@ -220,10 +222,12 @@ void fty_email_server(zsock_t* pipe, void* args)
 
                 if (streq(s_get(config, "smtp/use_auth", "false"), "true")) {
                     if (s_get(config, "smtp/user", NULL)) {
-                        smtp.username(s_get(config, "smtp/user", NULL));
+                        std::string user(s_get(config, "smtp/user", NULL));
+                        smtp.username(quotecodec::quoteDecode(user));
                     }
                     if (s_get(config, "smtp/password", NULL)) {
-                        smtp.password(s_get(config, "smtp/password", NULL));
+                        std::string pass(s_get(config, "smtp/password", NULL));
+                        smtp.password(quotecodec::quoteDecode(pass));
                     }
                 }
 
