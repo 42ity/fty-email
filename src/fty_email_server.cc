@@ -405,8 +405,9 @@ void fty_email_server(zsock_t* pipe, void* args)
                     log_info_email_audit("%s: Send email ok", name);
                 }
 
-                int r = mlm_client_sendto(client, mlm_client_sender(client),
-                    sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR", NULL, 1000, &reply);
+                const char* sender = mlm_client_sender(client);
+                const char* subject = sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR";
+                int r = mlm_client_sendto(client, sender, subject, NULL, 1000, &reply);
                 if (r == -1) {
                     log_error("Can't send a reply for SENDMAIL to %s", mlm_client_sender(client));
                 }
