@@ -44,16 +44,9 @@
 #include <regex>
 
 Smtp::Smtp()
-    : _host{}
-    , _port{"25"}
-    , _from{"EatonProductFeedback@eaton.com"}
-    , _encryption{Encryption::NONE}
-    , _username{}
-    , _password{}
-    , _msmtp{"/usr/bin/msmtp"}
-    , _has_fn{false}
-    , _verify_ca{false}
 {
+    initialize();
+
     _magic = magic_open(MAGIC_MIME | MAGIC_ERROR | MAGIC_NO_CHECK_COMPRESS | MAGIC_NO_CHECK_TAR);
     if (!_magic)
         throw std::runtime_error("Cannot open magic_cookie");
@@ -68,6 +61,19 @@ Smtp::Smtp()
 Smtp::~Smtp()
 {
     magic_close(_magic);
+}
+
+void Smtp::initialize()
+{
+    _host = "";
+    _port = "25";
+    _from = "EatonProductFeedback@eaton.com";
+    _encryption = Encryption::NONE;
+    _username = "";
+    _password = "";
+    _msmtp = "/usr/bin/msmtp";
+    _has_fn = false;
+    _verify_ca = false;
 }
 
 std::string Smtp::createConfigFile() const

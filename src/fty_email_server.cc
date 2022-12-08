@@ -61,7 +61,7 @@ static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
     char* ret = zconfig_get(config, key, dfl);
     if (!ret || streq(ret, ""))
         return dfl;
-        
+
     return ret;
 }
 
@@ -181,7 +181,11 @@ void fty_email_server(zsock_t* pipe, void* args)
                     break;
                 }
 
+                // reset SMTP server to default
+                smtp.initialize();
+
                 if (s_get(config, "server/language", DEFAULT_LANGUAGE)) {
+                    zstr_free(&language);
                     language = strdup(s_get(config, "server/language", DEFAULT_LANGUAGE));
                     int rv   = translation_change_language(language);
                     if (rv != TE_OK)
@@ -189,10 +193,11 @@ void fty_email_server(zsock_t* pipe, void* args)
                 }
                 // SMS_GATEWAY
                 if (s_get(config, "smtp/smsgateway", NULL)) {
+                    zstr_free(&sms_gateway);
                     sms_gateway = strdup(s_get(config, "smtp/smsgateway", NULL));
                 }
                 if (s_get(config, "smtp/gwtemplate", NULL)) {
-                    // return empty string because of conversion to std::string
+                    zstr_free(&gw_template);
                     gw_template = strdup(s_get(config, "smtp/gwtemplate", ""));
                 }
                 // MSMTP_PATH
