@@ -78,12 +78,9 @@ void Smtp::initialize()
 
 std::string Smtp::createConfigFile() const
 {
-    char        filename[] = "/tmp/bios-msmtp-XXXXXX.cfg";
-    int         handle     = mkstemps(filename, 4);
-    std::string line;
-
-    line                        = "defaults\n";
     const std::string verify_ca = _verify_ca ? "on" : "off";
+
+    std::string line = "defaults\n";
 
     switch (_encryption) {
         case Encryption::NONE:
@@ -94,42 +91,45 @@ std::string Smtp::createConfigFile() const
         case Encryption::TLS:
             line +=
                 "tls on\n"
-                "tls_certcheck " +
-                verify_ca + "\n";
+                "tls_certcheck " + verify_ca + "\n";
             break;
         case Encryption::STARTTLS:
             // TODO: check if this is correct!
             line +=
                 "tls off\n"
-                "tls_certcheck " +
-                verify_ca +
-                "\n"
+                "tls_certcheck " + verify_ca + "\n"
                 "tls_starttls on\n";
             break;
     }
+
     if (_username.empty()) {
         line += "auth off\n";
-    } else {
+    }
+    else {
         line +=
             "auth on\n"
-            "user " +
-            _username +
-            "\n"
-            "password " +
-            _password + "\n";
+            "user " + _username + "\n"
+            "password " + _password + "\n";
     }
 
     line += "account default\n";
     line += "host " + _host + "\n";
     line += "port " + _port + "\n";
     line += "from " + _from + "\n";
+
+    char filename[] = "/tmp/bios-msmtp-XXXXXX.cfg";
+    int handle = mkstemps(filename, 4); // 4 = len(".cfg")
+    log_debug("msmtp configuration file: %s\n%s", filename, line.c_str());
     ssize_t r = write(handle, line.c_str(), line.size());
-    if (r > 0 && static_cast<size_t>(r) != line.size())
-        log_error("write to %s was truncated, expected %zu, written %zd", filename, line.size(), r);
-    if (r == -1)
-        log_error("write to %s failed: %s", filename, strerror(errno));
     close(handle);
-    log_debug("msmtp configuration:\n%s", line.c_str());
+
+    if ((r > 0) && (static_cast<size_t>(r) != line.size())) {
+        log_error("write to %s was truncated, expected %zu, written %zd", filename, line.size(), r);
+    }
+    if (r == -1) {
+        log_error("write to %s failed: %s", filename, strerror(errno));
+    }
+
     return std::string(filename);
 }
 
@@ -150,30 +150,18 @@ void Smtp::encryption(std::string enc)
 
 void Smtp::sendmail(const std::vector<std::string>& to, const std::string& subject, const std::string& body) const
 {
-
     for (const auto& it : to) {
-        zuuid_t* uuid = zuuid_new();
-        zmsg_t*  msg =
-            fty_email_encode(zuuid_str_canonical(uuid), it.c_str(), subject.c_str(), nullptr, body.c_str(), nullptr);
-        zuuid_destroy(&uuid);
-
-        // MVY: this is weird, horrible, ugly and hard to use.
-        //      Need to rething API for smtp_encode
-        //      BUT .. NEVER pass message with first uuid frame to msg2email
-        //      or BAD things will happen
-        char* cuuid = zmsg_popstr(msg);
-        zstr_free(&cuuid);
+        // encode *without* uid
+        zmsg_t* msg = fty_email_encode(nullptr/*uid*/, it.c_str(), subject.c_str(), nullptr/*headers*/, body.c_str(), nullptr);
         sendmail(msg2email(&msg));
+        zmsg_destroy(&msg);
     }
 }
 
 void Smtp::sendmail(const std::string& to, const std::string& subject, const std::string& body) const
 {
-    std::vector<std::string> recip;
-    recip.push_back(to);
-    return sendmail(recip, subject, body);
+    return sendmail(std::vector<std::string>{to}, subject, body);
 }
-
 
 void Smtp::sendmail(const std::string& data) const
 {
@@ -189,9 +177,11 @@ void Smtp::sendmail(const std::string& data) const
     if (_host.empty()) {
         return;
     }
+
     fty::Process proc(_msmtp, {"-t", "-C", cfg});
-    auto         bret = proc.run();
+    auto bret = proc.run();
     if (!bret) {
+        deleteConfigFile(cfg);
         throw std::runtime_error("{} failed with '{}'"_format(_msmtp, bret.error()));
     }
 
@@ -220,19 +210,19 @@ static bool s_is_text(const char* mime)
 
 static std::string popString(zmsg_t* msg)
 {
-    char*       it = zmsg_popstr(msg);
-    std::string ret(it);
-    zstr_free(&it);
+    char* s = zmsg_popstr(msg);
+    std::string ret(s ? s : "");
+    zstr_free(&s);
     return ret;
 }
 
 std::string Smtp::msg2email(zmsg_t** msg_p) const
 {
     assert(msg_p && *msg_p);
-    zmsg_t* msg = *msg_p;
 
-    std::stringstream       buff;
     cxxtools::MimeMultipart mime;
+
+    zmsg_t* msg = *msg_p;
 
     std::string to      = popString(msg);
     std::string subject = popString(msg);
@@ -240,8 +230,8 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     body += popString(msg);
 
     mime.setHeader("To", to);
-    
-    if(subject.empty()) {
+
+    if (subject.empty()) {
         subject = "No Subject";
     }
     mime.setHeader("Subject", subject);
@@ -260,7 +250,6 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             mime.setHeader(key, value);
         }
         zhash_destroy(&headers);
-
 
         // NOTE: setLocale(LC_DATE, "C") should be called in outer scope
         time_t     t   = ::time(nullptr);
@@ -288,24 +277,27 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             zstr_free(&path);
         }
     }
-    zmsg_destroy(&msg);
-    *msg_p = nullptr;
 
+    zmsg_destroy(msg_p);
+    msg = nullptr;
+
+    std::stringstream buff;
     buff << mime;
     return buff.str();
 }
 
 std::string sms_email_address(const std::string& gw_template, const std::string& phone_number)
 {
-    std::string ret = gw_template;
     std::string clean_phone_number;
     for (const char ch : phone_number) {
-        if (::isdigit(ch))
+        if (std::isdigit(ch))
             clean_phone_number.push_back(ch);
     }
 
     ssize_t idx = static_cast<ssize_t>(clean_phone_number.size() - 1);
-    for (;;) {
+
+    std::string ret = gw_template;
+    while (1) {
         auto it = ret.find_last_of('#');
         if (it == std::string::npos)
             break;
@@ -321,7 +313,7 @@ std::string sms_email_address(const std::string& gw_template, const std::string&
 
 SmtpError msmtp_stderr2code(const std::string& inp)
 {
-    if (inp.size() == 0)
+    if (inp.empty())
         return SmtpError::Succeeded;
 
     static std::regex ServerUnreachable{"cannot connect to .*, port .*"};

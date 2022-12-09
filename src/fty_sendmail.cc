@@ -212,7 +212,7 @@ int main(int argc, char** argv)
     zmsg_t* msg = (poller && zpoller_wait(poller, 20000)) ? mlm_client_recv(client) : NULL;
     zpoller_destroy(&poller);
 
-    if (msg == NULL) {
+    if (!msg) {
         log_error("Recv response is NULL.");
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
