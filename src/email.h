@@ -95,6 +95,9 @@ public:
 
     ~Smtp();
 
+    /// initialize SMTP server config (reset to default)
+    void initialize();
+
     /// set the SMTP server address
     void host(const std::string& host)
     {

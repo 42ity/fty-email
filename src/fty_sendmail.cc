@@ -130,7 +130,7 @@ int main(int argc, char** argv)
     // end of the options
 
     char* endpoint = strdup(FTY_EMAIL_ENDPOINT); // mlm endpouint
-    char* smtp_address = strdup(FTY_EMAIL_ADDRESS); // fty-email agent
+    char* fty_email_address = strdup(FTY_EMAIL_ADDRESS); // fty-email agent
     char* address = zsys_sprintf("fty-sendmail.%d", getpid()); // client
 
     if (config_file) {
@@ -148,8 +148,8 @@ int main(int argc, char** argv)
         }
         aux = zconfig_get(config, "malamute/address", nullptr);
         if (aux) {
-            zstr_free(&smtp_address);
-            smtp_address = strdup(aux);
+            zstr_free(&fty_email_address);
+            fty_email_address = strdup(aux);
         }
 
         zconfig_destroy(&config);
@@ -159,16 +159,24 @@ int main(int argc, char** argv)
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
     }
 
-    log_debug("endpoint='%s', address='%s', smtp_address='%s'", endpoint, address, smtp_address);
+    log_debug("endpoint='%s', address='%s', fty_email_address='%s'", endpoint, address, fty_email_address);
 
     mlm_client_t* client = mlm_client_new();
+    if (!client) {
+        log_error("Failed to create client.");
+        zstr_free(&address);
+        zstr_free(&endpoint);
+        zstr_free(&fty_email_address);
+        exit(EXIT_FAILURE);
+    }
+
     int r = mlm_client_connect(client, endpoint, 1000, address);
     zstr_free(&address);
     zstr_free(&endpoint);
 
     if (r == -1) {
         log_error("Failed to connect.");
-        zstr_free(&smtp_address);
+        zstr_free(&fty_email_address);
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);
     }
@@ -184,11 +192,11 @@ int main(int argc, char** argv)
     }
     zmsg_print(mail);
 
-    log_debug("Sending email (smtp_address: '%s')...", smtp_address);
+    log_debug("Sending email (fty_email_address: '%s')...", fty_email_address);
 
-    r = mlm_client_sendto(client, smtp_address, "SENDMAIL", nullptr, 2000, &mail);
+    r = mlm_client_sendto(client, fty_email_address, "SENDMAIL", nullptr, 2000, &mail);
     zmsg_destroy(&mail);
-    zstr_free(&smtp_address);
+    zstr_free(&fty_email_address);
 
     log_trace("mlm_client_sendto(), r: %d", r);
 
@@ -204,7 +212,7 @@ int main(int argc, char** argv)
     zmsg_t* msg = (poller && zpoller_wait(poller, 20000)) ? mlm_client_recv(client) : NULL;
     zpoller_destroy(&poller);
 
-    if (msg == NULL) {
+    if (!msg) {
         log_error("Recv response is NULL.");
         mlm_client_destroy(&client);
         exit(EXIT_FAILURE);

@@ -161,7 +161,6 @@ std::string generate_subject(fty_proto_t* alert, const std::string& priority, co
     return s_generateEmailSubjectActive(alert, priority, extname);
 }
 
-
 std::string getIpAddr()
 {
     std::string     ipAddr       = "From: ";
@@ -172,11 +171,8 @@ std::string getIpAddr()
     getifaddrs(&ifAddrStruct);
 
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr) {
-            continue;
-        }
         // Check IP4 address
-        if (ifa->ifa_addr->sa_family == AF_INET) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
             tmpAddrPtr = &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr))->sin_addr;
             char addressBuffer[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
@@ -186,9 +182,11 @@ std::string getIpAddr()
             }
         }
     }
-    ipAddr += "\r\n";
-    if (ifAddrStruct != NULL)
-        freeifaddrs(ifAddrStruct);
 
+    if (ifAddrStruct) {
+        freeifaddrs(ifAddrStruct);
+    }
+
+    ipAddr += "\r\n";
     return ipAddr;
 }

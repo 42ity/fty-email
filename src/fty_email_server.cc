@@ -36,16 +36,22 @@
 #include <tuple>
 
 static void s_notify(
-    Smtp& smtp, const std::string& priority, const std::string& extname, const std::string& contact, fty_proto_t* alert)
+    Smtp& smtp, const std::string& priority, const std::string& assetname, const std::string& contact, fty_proto_t* alert)
 {
-    if (priority.empty())
+    if (priority.empty()) {
         throw std::runtime_error("Empty priority");
-    else if (extname.empty())
+    }
+    if (assetname.empty()) { // friendly mame
         throw std::runtime_error("Empty asset name");
-    else if (contact.empty())
+    }
+    if (contact.empty()) {
         throw std::runtime_error("Empty contact");
-    else
-        smtp.sendmail(contact, generate_subject(alert, priority, extname), generate_body(alert, priority, extname));
+    }
+
+    std::string subject = generate_subject(alert, priority, assetname);
+    std::string body = generate_body(alert, priority, assetname);
+
+    smtp.sendmail(contact, subject, body);
 }
 
 /// return dfl is item is NULL or empty string!!
@@ -61,22 +67,24 @@ static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
     char* ret = zconfig_get(config, key, dfl);
     if (!ret || streq(ret, ""))
         return dfl;
-        
+
     return ret;
 }
 
 zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, zhash_t* headers, const char* body, ...)
 {
-    assert(uuid);
     assert(to);
     assert(subject);
     assert(body);
 
     zmsg_t* msg = zmsg_new();
-    if (!msg)
+    if (!msg) {
         return NULL;
+    }
 
-    zmsg_addstr(msg, uuid);
+    if (uuid) { // optional
+        zmsg_addstr(msg, uuid);
+    }
     zmsg_addstr(msg, to);
     zmsg_addstr(msg, subject);
     zmsg_addstr(msg, body);
@@ -93,12 +101,14 @@ zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, 
 
     va_list args;
     va_start(args, body);
-    const char* path = va_arg(args, const char*);
 
-    while (path) {
+    do {
+        const char* path = va_arg(args, const char*);
+        if (!path) {
+            break;
+        }
         zmsg_addstr(msg, path);
-        path = va_arg(args, const char*);
-    }
+    } while(1);
 
     va_end(args);
 
@@ -133,8 +143,11 @@ static std::string humanReadableErrorMessage(const std::string& msg)
 
 void fty_email_server(zsock_t* pipe, void* args)
 {
-    bool  sendmail_only    = (args && streq(static_cast<char*>(args), "sendmail-only"));
-    char* name             = NULL;
+    bool  sendmail_only = (args && streq(static_cast<char*>(args), "sendmail-only"));
+
+    // default name (see LOAD command)
+    char* name = strdup(sendmail_only ? "fty-email-sendmail-only" : "fty-email");
+
     char* endpoint         = NULL;
     char* test_reader_name = NULL;
     char* sms_gateway      = NULL;
@@ -152,27 +165,32 @@ void fty_email_server(zsock_t* pipe, void* args)
     std::set<std::tuple<std::string, std::string>> streams;
     bool                                           producer = false;
 
-    log_info("fty_email_server started (sendmail_only: %s)", (sendmail_only ? "true" : "false"));
+    log_info("%s started ", name);
 
     zsock_signal(pipe, 0);
+
     while (!zsys_interrupted) {
 
-        void* which = zpoller_wait(poller, -1);
+        void* which = zpoller_wait(poller, 10000);
 
-        if (which == pipe) {
+        if (!which) {
+            if (zpoller_terminated(poller) || zsys_interrupted) {
+                break;
+            }
+        }
+        else if (which == pipe) {
             zmsg_t* msg = zmsg_recv(pipe);
             char*   cmd = zmsg_popstr(msg);
-            log_debug("%s:\tactor command=%s", name, cmd);
+            bool term = false;
+
+            log_debug("%s:\tcommand=%s", name, cmd);
 
             if (streq(cmd, "$TERM")) {
-                log_info("Got $TERM");
-                zstr_free(&cmd);
-                zmsg_destroy(&msg);
-                break;
-            } else if (streq(cmd, "LOAD")) {
+                log_trace("Got $TERM");
+                term = true;
+            }
+            else if (streq(cmd, "LOAD")) {
                 char* config_file = zmsg_popstr(msg);
-                log_debug("(agent-smtp):\tLOAD: %s", config_file);
-
                 zconfig_t* config = zconfig_load(config_file);
                 if (!config) {
                     log_error("Failed to load config file %s", config_file);
@@ -181,18 +199,24 @@ void fty_email_server(zsock_t* pipe, void* args)
                     break;
                 }
 
+                // reset SMTP server to default
+                smtp.initialize();
+
                 if (s_get(config, "server/language", DEFAULT_LANGUAGE)) {
+                    zstr_free(&language);
                     language = strdup(s_get(config, "server/language", DEFAULT_LANGUAGE));
                     int rv   = translation_change_language(language);
-                    if (rv != TE_OK)
+                    if (rv != TE_OK) {
                         log_warning("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
+                    }
                 }
                 // SMS_GATEWAY
                 if (s_get(config, "smtp/smsgateway", NULL)) {
+                    zstr_free(&sms_gateway);
                     sms_gateway = strdup(s_get(config, "smtp/smsgateway", NULL));
                 }
                 if (s_get(config, "smtp/gwtemplate", NULL)) {
-                    // return empty string because of conversion to std::string
+                    zstr_free(&gw_template);
                     gw_template = strdup(s_get(config, "smtp/gwtemplate", ""));
                 }
                 // MSMTP_PATH
@@ -214,9 +238,9 @@ void fty_email_server(zsock_t* pipe, void* args)
                     smtp.encryption(encryption);
                 }
                 else {
-                    log_warning("(agent-smtp): smtp/encryption has unknown value, got %s, expected (NONE|TLS|STARTTLS)",
-                        encryption);
-                    log_warning("(agent-smtp): smtp/encryption set to 'NONE'");
+                    log_warning("%s: smtp/encryption has unknown value, got %s, expected (NONE|TLS|STARTTLS)",
+                        name, encryption);
+                    log_warning("%s: smtp/encryption set to 'NONE'", name);
                     smtp.encryption("none");
                 }
 
@@ -240,37 +264,41 @@ void fty_email_server(zsock_t* pipe, void* args)
 
                 // malamute
                 if (zconfig_get(config, "malamute/verbose", NULL)) {
-                    const char* foo         = zconfig_get(config, "malamute/verbose", "false");
-                    bool        mlm_verbose = foo[0] == '1' ? true : false;
-                    mlm_client_set_verbose(client, mlm_verbose);
+                    const char* aux = zconfig_get(config, "malamute/verbose", "false");
+                    bool verbose = streq(aux, "true") || streq(aux, "1");
+                    mlm_client_set_verbose(client, verbose);
                 }
-                if (!client_connected) {
-                    if (zconfig_get(config, "malamute/endpoint", NULL) &&
-                        zconfig_get(config, "malamute/address", NULL)) {
 
+                if (!client_connected) { // once
+                    if (zconfig_get(config, "malamute/endpoint", NULL)
+                        && zconfig_get(config, "malamute/address", NULL)
+                    ) {
                         zstr_free(&endpoint);
                         endpoint = strdup(zconfig_get(config, "malamute/endpoint", NULL));
                         zstr_free(&name);
                         name = strdup(zconfig_get(config, "malamute/address", "fty-email"));
                         if (sendmail_only) {
                             char* oldname = name;
-                            name          = zsys_sprintf("%s-sendmail-only", oldname);
+                            name = zsys_sprintf("%s-sendmail-only", oldname);
                             zstr_free(&oldname);
                         }
                         uint32_t timeout = fty::convert<uint32_t>(zconfig_get(config, "malamute/timeout", "1000"));
-                        // sscanf("%" SCNu32, zconfig_get(config, "malamute/timeout", "1000"), &timeout);
 
                         log_debug("%s: mlm_client_connect (%s, %" PRIu32 ", %s)", name, endpoint, timeout, name);
                         int r = mlm_client_connect(client, endpoint, timeout, name);
-                        if (r == -1)
+                        if (r != 0) {
                             log_error("%s: mlm_client_connect (%s, %" PRIu32 ", %s) = %d FAILED", name, endpoint,
                                 timeout, name, r);
-                        else
+                        }
+                        else {
                             client_connected = true;
-                    } else
+                        }
+                    }
+                    else {
                         log_warning(
-                            "(agent-smtp): malamute/endpoint or malamute/address not in configuration, NOT connected "
-                            "to the broker!");
+                            "%s: malamute/endpoint or malamute/address not in configuration, NOT connected "
+                            "to the broker!", name);
+                    }
                 }
 
                 // skip if sendmail_only
@@ -289,203 +317,221 @@ void fty_email_server(zsock_t* pipe, void* args)
                                     continue;
 
                                 int r = mlm_client_set_consumer(client, stream, pattern);
-                                if (r == -1)
+                                if (r != 0) {
                                     log_warning("%s:\tcannot subscribe on %s/%s", name, stream, pattern);
-                                else
+                                }
+                                else {
                                     streams.insert(std::make_tuple(stream, pattern));
+                                }
                             }
-                        } else
+                        }
+                        else {
                             log_warning(
-                                "(agent-smtp): client is not connected to broker, can't subscribe to the stream!");
+                                "%s: client is not connected to broker, can't subscribe to the stream!", name);
+                        }
                     }
                 }
 
                 if (zconfig_get(config, "malamute/producer", NULL)) {
-                    if (!mlm_client_connected(client))
-                        log_warning("(agent-smtp): client is not connected to broker, can't publish on the stream!");
+                    if (!mlm_client_connected(client)) {
+                        log_warning("%s: client is not connected to broker, can't publish on the stream!", name);
+                    }
                     else if (!producer) {
                         const char* stream = zconfig_get(config, "malamute/producer", NULL);
-                        int         r      = mlm_client_set_producer(client, stream);
-                        if (r == -1)
+                        int r = mlm_client_set_producer(client, stream);
+                        if (r != 0) {
                             log_warning("%s:\tcannot publish on %s", name, stream);
-                        else
+                        }
+                        else {
                             producer = true;
+                        }
                     }
                 }
 
                 zconfig_destroy(&config);
                 zstr_free(&config_file);
-            } else if (streq(cmd, "_MSMTP_TEST")) {
+            }
+            else if (streq(cmd, "_MSMTP_TEST")) {
+                zstr_free(&test_reader_name);
                 test_reader_name = zmsg_popstr(msg);
-                test_client      = mlm_client_new();
-                assert(test_client);
-                assert(endpoint);
-                int rv = mlm_client_connect(test_client, endpoint, 1000, "smtp-test-client");
-                if (rv == -1) {
-                    log_error("%s\t:can't connect on test_client, endpoint=%s", name, endpoint);
+
+                if (!test_client) {
+                    test_client = mlm_client_new();
+                    assert(test_client);
+                    assert(endpoint);
+                    int r = mlm_client_connect(test_client, endpoint, 1000, "smtp-test-client");
+                    if (r != 0) {
+                        log_error("%s\t:can't connect on test_client, endpoint=%s", name, endpoint);
+                    }
                 }
                 std::function<void(const std::string&)> cb = [test_client, test_reader_name](const std::string& data) {
                     mlm_client_sendtox(test_client, test_reader_name, "btest", data.c_str(), NULL);
                 };
                 smtp.sendmail_set_test_fn(cb);
-            } else {
+            }
+            else {
                 log_error("unhandled command %s", cmd);
             }
+
             zstr_free(&cmd);
             zmsg_destroy(&msg);
-            continue;
+
+            if (term) {
+                break;
+            }
         }
-
-        zmsg_t* zmessage = mlm_client_recv(client);
-        if (zmessage == NULL) {
-            log_debug("%s:\tzmessage is NULL", name);
-            continue;
-        }
-        std::string from = mlm_client_sender(client);
-        std::string topic = mlm_client_subject(client);
-
-        // TODO add SMTP settings
-        if (streq(mlm_client_command(client), "MAILBOX DELIVER"))
-        {
-            log_debug("%s:\tMAILBOX DELIVER, from=%s, subject=%s", name, from.c_str(), topic.c_str());
-
-            char* uuid = zmsg_popstr(zmessage);
-            if (!uuid) {
-                log_error("UUID frame is missing from zmessage, ignoring");
-                zmsg_destroy(&zmessage);
+        else if (which == mlm_client_msgpipe(client)) {
+            zmsg_t* msg = mlm_client_recv(client);
+            if (!msg) {
+                log_debug("%s:\tmsg is NULL", name);
                 continue;
             }
 
-            zmsg_t* reply = zmsg_new();
-            zmsg_addstr(reply, uuid); // common first frame of reply
-            zstr_free(&uuid);
+            std::string command = mlm_client_command(client);
 
-            if (topic == "SENDMAIL")
+            if (command == "MAILBOX DELIVER")
             {
-                bool sent_ok = false;
-                try {
-                    if (zmsg_size(zmessage) == 1) {
-                        std::string body = getIpAddr();
-                        ZstrGuard   bodyTemp(zmsg_popstr(zmessage));
-                        body += bodyTemp.get();
-                        log_debug("%s:\tsmtp.sendmail (%s)", name, body.c_str());
-                        log_debug_email_audit("%s: Send email: %s", name, body.c_str());
-                        smtp.sendmail(body);
-                    } else {
-                        zmsg_print(zmessage);
-                        auto mail = smtp.msg2email(&zmessage);
-                        log_debug("%s:\tSend email: %s", name, mail.c_str());
-                        log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
-                        smtp.sendmail(mail);
+                std::string sender = mlm_client_sender(client);
+                std::string subject = mlm_client_subject(client);
+                log_debug("%s:\tMAILBOX DELIVER, sender=%s, subject=%s", name, sender.c_str(), subject.c_str());
+
+                char* uuid = zmsg_popstr(msg);
+                if (!uuid) {
+                    log_error("UUID frame is missing from message");
+                    zmsg_destroy(&msg);
+                    continue;
+                }
+
+                zmsg_t* reply = zmsg_new();
+                zmsg_addstr(reply, uuid); // common first frame of reply
+                zstr_free(&uuid);
+
+                if (subject == "SENDMAIL")
+                {
+                    bool sent_ok = false;
+                    try {
+                        if (zmsg_size(msg) == 1) {
+                            std::string body = getIpAddr();
+                            ZstrGuard   bodyTemp(zmsg_popstr(msg));
+                            body += bodyTemp.get();
+                            log_debug("%s:\tsmtp.sendmail (%s)", name, body.c_str());
+                            log_debug_email_audit("%s: Send email: %s", name, body.c_str());
+                            smtp.sendmail(body);
+                        }
+                        else {
+                            zmsg_print(msg);
+                            auto mail = smtp.msg2email(&msg);
+                            log_debug("%s:\tSend email: %s", name, mail.c_str());
+                            log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
+                            smtp.sendmail(mail);
+                        }
+
+                        zmsg_addstr(reply, "0");
+                        zmsg_addstr(reply, "OK");
+                        sent_ok = true;
+                    }
+                    catch (const std::runtime_error& re) {
+                        log_debug("%s:\tgot std::runtime_error, e.what ()=%s", name, re.what());
+                        log_error_email_audit("%s: Send email error: %s", name, re.what ());
+
+                        uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
+                        auto errMsg = humanReadableErrorMessage(re.what());
+
+                        zmsg_addstrf(reply, "%" PRIu32, code);
+                        zmsg_addstr(reply, UTF8::escape(errMsg.c_str()).c_str());
+                        sent_ok = false;
                     }
 
-                    zmsg_addstr(reply, "0");
-                    zmsg_addstr(reply, "OK");
-                    sent_ok = true;
-                }
-                catch (const std::runtime_error& re) {
-                    log_debug("%s:\tgot std::runtime_error, e.what ()=%s", name, re.what());
-                    log_error_email_audit("%s: Send email error: %s", name, re.what ());
-
-                    uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
-                    auto errMsg = humanReadableErrorMessage(re.what());
-
-                    zmsg_addstrf(reply, "%" PRIu32, code);
-                    zmsg_addstr(reply, UTF8::escape(errMsg.c_str()).c_str());
-                    sent_ok = false;
-                }
-
-                log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
-                if (sent_ok) {
-                    log_info_email_audit("%s: Send email ok", name);
-                }
-
-                int r = mlm_client_sendto(client, mlm_client_sender(client),
-                    sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR", NULL, 1000, &reply);
-                if (r == -1) {
-                    log_error("Can't send a reply for SENDMAIL to %s", mlm_client_sender(client));
-                }
-            }
-            else if (topic == "SENDMAIL_ALERT" || topic == "SENDSMS_ALERT")
-            {
-                char*        priority          = zmsg_popstr(zmessage);
-                char*        extname           = zmsg_popstr(zmessage);
-                char*        contact           = zmsg_popstr(zmessage);
-                fty_proto_t* alert             = fty_proto_decode(&zmessage);
-                const char*  rule              = alert ? fty_proto_rule(alert) : "";
-
-                log_debug("alert (rule: %s, extname: %s, contact: %s)", rule, extname, contact);
-
-                std::string  gateway           = gw_template == NULL ? "" : gw_template;
-                std::string  converted_contact = contact ? contact : "";
-                std::string audit_contact = converted_contact;
-                bool sent_ok = false;
-                try {
-                    if (topic == "SENDSMS_ALERT") {
-                        log_debug("gw_template = %s", gw_template);
-                        log_debug("contact = %s", contact);
-                        std::string _contact = sms_email_address(gateway, converted_contact);
-                        audit_contact = _contact;
-                        s_notify(smtp, priority, extname, _contact, alert);
-                    } else {
-                        s_notify(smtp, priority, extname, converted_contact, alert);
+                    log_debug("%s:\t%s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
+                    if (sent_ok) {
+                        log_info_email_audit("%s: Send email ok", name);
                     }
 
-                    zmsg_addstr(reply, "OK");
-                    sent_ok = true;
+                    const char* replySubject = sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR";
+                    int r = mlm_client_sendto(client, sender.c_str(), replySubject, NULL, 1000, &reply);
+                    if (r == -1) {
+                        log_error("Can't send a reply for SENDMAIL to %s", sender.c_str());
+                    }
                 }
-                catch (const std::exception& re) {
-                    log_error("Sending of e-mail/SMS alert failed : %s", re.what());
-                    if (!audit_contact.empty()) {
-                        // Workaround for unwanted logs: log audit only if contact is not empty
-                        log_error_email_audit("%s: Send email/SMS alert error (gateway=%s contact=%s extname=%s alert=%s): %s",
-                            name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule, re.what ());
+                else if (subject == "SENDMAIL_ALERT" || subject == "SENDSMS_ALERT")
+                {
+                    char*        priority          = zmsg_popstr(msg);
+                    char*        extname           = zmsg_popstr(msg); // asset friendly name
+                    char*        contact           = zmsg_popstr(msg);
+                    fty_proto_t* alert             = fty_proto_decode(&msg);
+                    const char*  rule              = alert ? fty_proto_rule(alert) : "";
+
+                    log_debug("alert (rule: %s, extname: %s, contact: %s)", rule, extname, contact);
+
+                    std::string  gateway           = gw_template ? gw_template : "";
+                    std::string  converted_contact = contact ? contact : "";
+
+                    std::string audit_contact = converted_contact;
+                    bool sent_ok = false;
+                    try {
+                        if (subject == "SENDSMS_ALERT") {
+                            log_debug("gw_template = %s", gw_template);
+                            std::string sms_contact = sms_email_address(gateway, converted_contact);
+                            audit_contact = sms_contact;
+                            s_notify(smtp, priority, extname, sms_contact, alert);
+                        }
+                        else { //SENDMAIL_ALERT
+                            s_notify(smtp, priority, extname, converted_contact, alert);
+                        }
+
+                        zmsg_addstr(reply, "OK");
+                        sent_ok = true;
+                    }
+                    catch (const std::exception& e) {
+                        log_error("%s failed: %s", subject.c_str(), e.what());
+                        if (!audit_contact.empty()) {
+                            // Workaround for unwanted logs: log audit only if contact is not empty
+                            log_error_email_audit("%s: Send email/SMS alert error (gateway=%s contact=%s extname=%s alert=%s): %s",
+                                name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule, e.what ());
+                        }
+
+                        zmsg_addstr(reply, "ERROR");
+                        zmsg_addstr(reply, e.what());
+                        sent_ok = false;
                     }
 
-                    zmsg_addstr(reply, "ERROR");
-                    zmsg_addstr(reply, re.what());
-                    sent_ok = false;
+                    log_debug("%s:\t%s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
+                    if (sent_ok) {
+                        log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s alert=%s)",
+                            name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule);
+                    }
+
+                    int r = mlm_client_sendto(client, sender.c_str(), subject.c_str(), NULL, 1000, &reply);
+                    if (r == -1) {
+                        log_error("Can't send a reply for %s to %s", subject.c_str(), sender.c_str());
+                    }
+
+                    fty_proto_destroy(&alert);
+                    zstr_free(&contact);
+                    zstr_free(&extname);
+                    zstr_free(&priority);
+                }
+                else
+                {
+                    log_warning("%s:\tUnknown subject %s", name, subject.c_str());
                 }
 
-                log_debug("%s:\t%s Send mail %s", name, topic.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
-                if (sent_ok) {
-                    log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s alert=%s)",
-                        name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule);
-                }
-
-                int r = mlm_client_sendto(client, mlm_client_sender(client), topic.c_str(), NULL, 1000, &reply);
-                if (r == -1) {
-                    log_error("Can't send a reply for SENDMAIL_ALERT to %s", mlm_client_sender(client));
-                }
-
-                fty_proto_destroy(&alert);
-                zstr_free(&contact);
-                zstr_free(&extname);
-                zstr_free(&priority);
+                zmsg_destroy(&reply);
+                zmsg_destroy(&msg);
             }
-            else
-            {
-                log_warning("%s:\tUnknown subject %s", name, topic.c_str());
-            }
-
-            zmsg_destroy(&reply);
-            zmsg_destroy(&zmessage);
-            continue;
         }
-
-        zmsg_destroy(&zmessage);
     }
 
     log_info("%s:\tfty_email_server ended", name);
 
     zstr_free(&name);
     zstr_free(&endpoint);
-    zstr_free(&test_reader_name);
     zstr_free(&sms_gateway);
     zstr_free(&gw_template);
     zstr_free(&language);
+    zstr_free(&test_reader_name);
+
     zpoller_destroy(&poller);
-    mlm_client_destroy(&client);
     mlm_client_destroy(&test_client);
-    zclock_sleep(1000);
+    mlm_client_destroy(&client);
 }
