@@ -33,9 +33,7 @@
 #define TRANSLATION_PREFIX "locale_"
 
 // hack to allow reload of config file w/o the need to rewrite server to zloop and reactors
-char*      config_file      = nullptr;
-char*      language         = nullptr;
-char*      translation_path = nullptr;
+std::string config_file;
 
 zconfig_t* config = nullptr;
 zactor_t* smtp_server = nullptr;
@@ -63,14 +61,14 @@ static int s_timer_event(zloop_t* /* loop */, int /* timer_id */, void* /* outpu
 {
     // assume config & config_file are set
     if (zconfig_has_changed(config)) {
-        log_info("Content of %s have changed, reload it", config_file);
+        log_info("Content of %s have changed, reload it", config_file.c_str());
         zconfig_reload(&config);
 
         if (send_mail_only_server) {
-            zstr_sendx(send_mail_only_server, "LOAD", config_file, nullptr);
+            zstr_sendx(send_mail_only_server, "LOAD", config_file.c_str(), nullptr);
         }
         if (smtp_server) {
-            zstr_sendx(smtp_server, "LOAD", config_file, nullptr);
+            zstr_sendx(smtp_server, "LOAD", config_file.c_str(), nullptr);
         }
     }
 
@@ -82,15 +80,15 @@ int main(int argc, char** argv)
     int verbose = 0;
     int help    = 0;
 
-    char* smtpserver   = getenv("BIOS_SMTP_SERVER");
-    char* smtpport     = getenv("BIOS_SMTP_PORT");
-    char* smtpuser     = getenv("BIOS_SMTP_USER");
-    char* smtppassword = getenv("BIOS_SMTP_PASSWD");
-    char* smtpfrom     = getenv("BIOS_SMTP_FROM");
-    char* smtpencrypt  = getenv("BIOS_SMTP_ENCRYPT");
-    char* msmtp_path   = getenv("_MSMTP_PATH_");
-    char* smsgateway   = getenv("BIOS_SMTP_SMS_GATEWAY");
-    char* smtpverify   = getenv("BIOS_SMTP_VERIFY_CA");
+    std::string smtpserver   = getenv("BIOS_SMTP_SERVER") ? getenv("BIOS_SMTP_SERVER") : "";
+    std::string smtpport     = getenv("BIOS_SMTP_PORT") ? getenv("BIOS_SMTP_PORT") : "";
+    std::string smtpuser     = getenv("BIOS_SMTP_USER") ? getenv("BIOS_SMTP_USER") : "";
+    std::string smtppassword = getenv("BIOS_SMTP_PASSWD") ? getenv("BIOS_SMTP_PASSWD") : "";
+    std::string smtpfrom     = getenv("BIOS_SMTP_FROM") ? getenv("BIOS_SMTP_FROM") : "";
+    std::string smtpencrypt  = getenv("BIOS_SMTP_ENCRYPT") ? getenv("BIOS_SMTP_ENCRYPT") : "";
+    std::string msmtp_path   = getenv("_MSMTP_PATH_") ? getenv("_MSMTP_PATH_") : "";
+    std::string smsgateway   = getenv("BIOS_SMTP_SMS_GATEWAY") ? getenv("BIOS_SMTP_SMS_GATEWAY") : "";
+    std::string smtpverify   = getenv("BIOS_SMTP_VERIFY_CA") ? getenv("BIOS_SMTP_VERIFY_CA") : "";
 
     ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
@@ -141,7 +139,7 @@ int main(int argc, char** argv)
                 smtpencrypt = optarg;
                 break;
             case 'c':
-                config_file = strdup(optarg);
+                config_file = optarg;
                 break;
             case 0:
                 // just now walking trough some long opt
@@ -158,7 +156,7 @@ int main(int argc, char** argv)
     }
     // end of the options
 
-    if (!config_file) {
+    if (config_file.empty()) {
         log_info(
             "No config file specified, falling back to enviromental variables.\nNote this is deprecated and will be "
             "removed!");
@@ -166,43 +164,43 @@ int main(int argc, char** argv)
         zconfig_put(config, "server/verbose", verbose ? "1" : "0");
         zconfig_put(config, "server/language", DEFAULT_LANGUAGE);
 
-        zconfig_put(config, "smtp/server", smtpserver);
-        zconfig_put(config, "smtp/port", smtpport ? smtpport : "25");
-        if (smtpuser)
-            zconfig_put(config, "smtp/user", smtpuser);
-        if (smtppassword)
-            zconfig_put(config, "smtp/password", smtppassword);
-        if (smtpfrom)
-            zconfig_put(config, "smtp/from", smtpfrom);
-        zconfig_put(config, "smtp/encryption", smtpencrypt ? smtpencrypt : "none");
-        if (msmtp_path)
-            zconfig_put(config, "smtp/msmtppath", msmtp_path);
-        if (smsgateway)
-            zconfig_put(config, "smtp/smsgateway", smsgateway);
-        zconfig_put(config, "smtp/verify_ca", smtpverify ? "1" : "0");
+        zconfig_put(config, "smtp/server", smtpserver.c_str());
+        zconfig_put(config, "smtp/port", !smtpport.empty() ? smtpport.c_str() : "25");
+        if (!smtpuser.empty())
+            zconfig_put(config, "smtp/user", smtpuser.c_str());
+        if (!smtppassword.empty())
+            zconfig_put(config, "smtp/password", smtppassword.c_str());
+        if (!smtpfrom.empty())
+            zconfig_put(config, "smtp/from", smtpfrom.c_str());
+        zconfig_put(config, "smtp/encryption", !smtpencrypt.empty() ? smtpencrypt.c_str() : "none");
+        if (!msmtp_path.empty())
+            zconfig_put(config, "smtp/msmtppath", msmtp_path.c_str());
+        if (!smsgateway.empty())
+            zconfig_put(config, "smtp/smsgateway", smsgateway.c_str());
+        zconfig_put(config, "smtp/verify_ca", !smtpverify.empty() ? "1" : "0");
 
         zconfig_put(config, "malamute/endpoint", FTY_EMAIL_ENDPOINT);
         zconfig_put(config, "malamute/address", FTY_EMAIL_ADDRESS);
 
         zconfig_print(config);
 
-        config_file = strdup(FTY_EMAIL_CONFIG_FILE);
-        int r       = zconfig_save(config, config_file);
+        config_file = std::string(FTY_EMAIL_CONFIG_FILE);
+        int r       = zconfig_save(config, config_file.c_str());
         if (r == -1) {
             log_error("Error while saving config file %s: %m", config_file);
             exit(EXIT_FAILURE);
         }
     } else {
-        config = zconfig_load(config_file);
+        config = zconfig_load(config_file.c_str());
         if (!config) {
             log_error("Failed to load config file %s: %m", config_file);
             exit(EXIT_FAILURE);
         }
 
-        language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
-        rv       = translation_change_language(language);
+        std::string language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
+        rv       = translation_change_language(language.c_str());
         if (rv != TE_OK)
-            log_warning("Language not changed to %s, continuing in %s", language, DEFAULT_LANGUAGE);
+            log_warning("Language not changed to %s, continuing in %s", language.c_str(), DEFAULT_LANGUAGE);
     }
 
     if (verbose)
@@ -230,8 +228,8 @@ int main(int argc, char** argv)
     // initialize log for auditability
     AuditLogManager::init(FTY_EMAIL_ADDRESS);
 
-    zstr_sendx(smtp_server, "LOAD", config_file, nullptr);
-    zstr_sendx(send_mail_only_server, "LOAD", config_file, nullptr);
+    zstr_sendx(smtp_server, "LOAD", config_file.c_str(), nullptr);
+    zstr_sendx(send_mail_only_server, "LOAD", config_file.c_str(), nullptr);
 
     // monitor configuration changes
     zloop_t* check_config = zloop_new();
@@ -252,8 +250,6 @@ int main(int argc, char** argv)
     zactor_destroy(&smtp_server);
     zactor_destroy(&send_mail_only_server);
     zconfig_destroy(&config);
-    zstr_free(&translation_path);
-    zstr_free(&config_file);
 
     // release audit context
     AuditLogManager::deinit();
