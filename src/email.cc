@@ -31,7 +31,6 @@
 #include "fty_email_server.h"
 #include <ctime>
 #include <fstream>
-//#include <fty_common_mlm.h>
 #include <fty_log.h>
 #include <sstream>
 #include <stdio.h>
@@ -165,8 +164,6 @@ void Smtp::sendmail(const std::string& to, const std::string& subject, const std
 
 void Smtp::sendmail(const std::string& data) const
 {
-    using namespace fmt::literals;
-
     // for testing
     if (_has_fn) {
         _fn(data);
@@ -174,6 +171,7 @@ void Smtp::sendmail(const std::string& data) const
     }
 
     std::string cfg = createConfigFile();
+
     if (_host.empty()) {
         return;
     }
@@ -182,7 +180,7 @@ void Smtp::sendmail(const std::string& data) const
     auto bret = proc.run();
     if (!bret) {
         deleteConfigFile(cfg);
-        throw std::runtime_error("{} failed with '{}'"_format(_msmtp, bret.error()));
+        throw std::runtime_error(_msmtp + " failed with '" + bret.error() + "'");
     }
 
     bool wr = proc.write(data);
@@ -193,12 +191,13 @@ void Smtp::sendmail(const std::string& data) const
     auto ret = proc.wait(50000);
     deleteConfigFile(cfg);
     if (!ret) {
-        throw std::runtime_error("{} wait with '{}'"_format(_msmtp, ret.error()));
+        throw std::runtime_error(_msmtp + " wait with '" + ret.error() + "'");
     }
 
     if (*ret != 0) {
-        throw std::runtime_error(
-            "{} failed with exit code '{}'\nstderr: {}\n"_format(_msmtp, *ret, proc.readAllStandardError()));
+        std::string msg = _msmtp + " failed with exit code '" + std::to_string(*ret)
+            + "'\nstderr: " + proc.readAllStandardError() + "\n";
+        throw std::runtime_error(msg);
     }
 }
 
