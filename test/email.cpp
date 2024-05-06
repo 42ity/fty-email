@@ -7,7 +7,7 @@
 #include <fstream>
 #include <fty_log.h>
 
-TEST_CASE("email_test")
+TEST_CASE("email test")
 {
     ManageFtyLog::setInstanceFtylog("email_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
     AuditLogManager::init("email_test");

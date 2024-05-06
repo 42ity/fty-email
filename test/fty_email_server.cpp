@@ -10,7 +10,7 @@
 #include <fty_log.h>
 #include <iostream>
 
-TEST_CASE("fty_email_server_test")
+TEST_CASE("fty_email_server test")
 {
     ManageFtyLog::setInstanceFtylog("fty_email_server_test", FTY_COMMON_LOGGING_DEFAULT_CFG);
     AuditLogManager::init("fty_email_server_test");
@@ -24,8 +24,9 @@ TEST_CASE("fty_email_server_test")
     //AuditLogManager::deinit(); return;
 
     int rv = translation_initialize(FTY_EMAIL_ADDRESS, "test/conf", "test_");
-    if (rv != TE_OK)
+    if (rv != TE_OK) {
         log_warning("Translation not initialized");
+    }
 
     char* pidfile = zsys_sprintf("%s/btest.pid", ".");
     REQUIRE(pidfile != NULL);
