@@ -152,7 +152,7 @@ int main(int argc, char** argv)
     }
     if (help) {
         usage();
-        exit(1);
+        return EXIT_FAILURE;
     }
     // end of the options
 
@@ -188,19 +188,20 @@ int main(int argc, char** argv)
         int r       = zconfig_save(config, config_file.c_str());
         if (r == -1) {
             log_error("Error while saving config file %s: %m", config_file);
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
     } else {
         config = zconfig_load(config_file.c_str());
         if (!config) {
             log_error("Failed to load config file %s: %m", config_file);
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
 
         std::string language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
         rv       = translation_change_language(language.c_str());
-        if (rv != TE_OK)
+        if (rv != TE_OK) {
             log_warning("Language not changed to %s, continuing in %s", language.c_str(), DEFAULT_LANGUAGE);
+        }
     }
 
     if (verbose)
@@ -211,7 +212,7 @@ int main(int argc, char** argv)
     smtp_server = zactor_new(fty_email_server, nullptr);
     if (!smtp_server) {
         log_error("smtp_server: cannot start the daemon");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // new actor with "sendmail-only"
@@ -222,7 +223,7 @@ int main(int argc, char** argv)
     if (!send_mail_only_server) {
         log_error("send_mail_only_server: cannot start the daemon");
         zactor_destroy(&smtp_server);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // initialize log for auditability
@@ -254,5 +255,5 @@ int main(int argc, char** argv)
     // release audit context
     AuditLogManager::deinit();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

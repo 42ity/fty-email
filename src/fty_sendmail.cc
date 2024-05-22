@@ -101,7 +101,7 @@ int main(int argc, char** argv)
                 p = realpath(optarg, path);
                 if (!p) {
                     log_error("Can't get absolute path for %s: %s", optarg, strerror(errno));
-                    exit(EXIT_FAILURE);
+                    return EXIT_FAILURE;
                 }
                 attachments.push_back(path);
                 break;
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 
     if (help || recipient == nullptr || optind < argc) {
         usage();
-        exit(1);
+        return EXIT_FAILURE;
     }
     // end of the options
 
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
         zconfig_t* config = zconfig_load(config_file);
         if (!config) {
             log_error("Failed to load %s: %m", config_file);
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
 
         char* aux = zconfig_get(config, "malamute/endpoint", nullptr);
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
         zstr_free(&address);
         zstr_free(&endpoint);
         zstr_free(&fty_email_address);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     int r = mlm_client_connect(client, endpoint, 1000, address);
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
         log_error("Failed to connect.");
         zstr_free(&fty_email_address);
         mlm_client_destroy(&client);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     log_debug("Encoding email...");
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
 
     log_debug("Sending email (fty_email_address: '%s')...", fty_email_address);
 
-    r = mlm_client_sendto(client, fty_email_address, "SENDMAIL", nullptr, 2000, &mail);
+    r = mlm_client_sendto(client, fty_email_address, "SENDMAIL", nullptr, 5000, &mail);
     zmsg_destroy(&mail);
     zstr_free(&fty_email_address);
 
@@ -203,7 +203,7 @@ int main(int argc, char** argv)
     if (r != 0) {
         log_error("Failed to send the email (mlm_client_sendto() returned %d)", r);
         mlm_client_destroy(&client);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     log_trace("mlm_client_recv()...");
@@ -215,10 +215,12 @@ int main(int argc, char** argv)
     if (!msg) {
         log_error("Recv response is NULL.");
         mlm_client_destroy(&client);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     char* uuid = zmsg_popstr(msg);
+    zstr_free(&uuid); // ignored
+
     char* code = zmsg_popstr(msg);
     char* reason = zmsg_popstr(msg);
     zmsg_destroy(&msg);
@@ -229,14 +231,16 @@ int main(int argc, char** argv)
     }
 
     log_debug("%s (subject: '%s', code: '%s',  reason: '%s')",
-        (exit_code == EXIT_FAILURE ? "Failure" : "Success"),
-        mlm_client_subject(client), code, reason);
+        (exit_code == EXIT_SUCCESS ? "Success" : "Failure"),
+        mlm_client_subject(client),
+        code,
+        reason);
 
     zstr_free(&code);
     zstr_free(&reason);
-    zstr_free(&uuid);
     mlm_client_destroy(&client);
 
     log_debug("Done");
-    exit(exit_code);
+
+    return exit_code;
 }

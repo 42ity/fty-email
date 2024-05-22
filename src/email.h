@@ -201,12 +201,12 @@ protected:
     std::string                             _host;
     std::string                             _port;
     std::string                             _from;
-    Encryption                              _encryption;
+    Encryption                              _encryption{Encryption::NONE};
     std::string                             _username;
     std::string                             _password;
     std::string                             _msmtp;
-    bool                                    _has_fn;
-    bool                                    _verify_ca;
+    bool                                    _has_fn{false};
+    bool                                    _verify_ca{false};
     std::function<void(const std::string&)> _fn;
     magic_t                                 _magic;
 };

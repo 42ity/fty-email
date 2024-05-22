@@ -20,6 +20,7 @@
 */
 
 #pragma once
+
 #include <czmq.h>
 
 ///  Main actor sending emails (and sms2email)

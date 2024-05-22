@@ -24,6 +24,7 @@
 #include "emailconfiguration.h"
 #include <fty_common_macros.h>
 #include <fty_common_translation.h>
+#include <fty_log.h>
 
 /* This is what this code is intended to do:
  * - calling TRANSLATE_ME on template returns this kind of JSON:
@@ -33,6 +34,12 @@
  *   "__severity__ alert on __assetname__\nfrom the rule __rulename__ is active!"
  * - replace_tokens() then replaces __string__ patterns with corresponding values
  */
+
+#define SUBJECT_ACTIVE                                                                                                 \
+    TRANSLATE_ME(                                                                                                      \
+        "%s alert on %s\n\
+from the rule %s is active!",                                                                                          \
+        "__severity__", "__assetname__", "__rulename__")
 
 #define BODY_ACTIVE                                                                                                    \
     TRANSLATE_ME(                                                                                                      \
@@ -45,34 +52,28 @@ Alert description: %s\n\
 Alert state: %s",                                                                                                      \
         "__rulename__", "__assetname__", "__priority__", "__severity__", "__description__", "__state__")
 
-#define SUBJECT_ACTIVE                                                                                                 \
-    TRANSLATE_ME(                                                                                                      \
-        "%s alert on %s\n\
-from the rule %s is active!",                                                                                          \
-        "__severity__", "__assetname__", "__rulename__")
-
-#define BODY_RESOLVED                                                                                                  \
-    TRANSLATE_ME(                                                                                                      \
-        "In the system an alert was resolved.\n\
-Source rule: %sn\
-Asset: %s\n\
-Alert description: %s",                                                                                                \
-        "__rulename__", "__assetname__", "__description__")
-
 #define SUBJECT_RESOLVED                                                                                               \
     TRANSLATE_ME(                                                                                                      \
         "Alert on %s \n\
 from the rule %s was resolved",                                                                                        \
         "__assetname__", "__rulename__")
 
+#define BODY_RESOLVED                                                                                                  \
+    TRANSLATE_ME(                                                                                                      \
+        "In the system an alert was resolved.\n\
+Source rule: %s\n\
+Asset: %s\n\
+Alert description: %s",                                                                                                \
+        "__rulename__", "__assetname__", "__description__")
+
 
 // ----------------------------------------------------------------------------
 // static helper functions
 
-static std::string replace_tokens(const std::string& text, const std::string& pattern, const std::string& replacement)
+static std::string s_replace_tokens(const std::string& text, const std::string& pattern, const std::string& replacement)
 {
     std::string result = text;
-    size_t      pos    = 0;
+    size_t pos = 0;
     while ((pos = result.find(pattern, pos)) != std::string::npos) {
         result.replace(pos, pattern.length(), replacement);
         pos += replacement.length();
@@ -80,65 +81,70 @@ static std::string replace_tokens(const std::string& text, const std::string& pa
     return result;
 }
 
+// wrapper over translation_get_translated_text() that can easily throw
+static std::string s_translation_get_translated_text(const char* text)
+{
+    char* aux = NULL;
+    try {
+        aux = text ? translation_get_translated_text(text) : NULL;
+    }
+    catch (...) {
+    }
+
+    if (!aux) {
+        aux = strdup(text ? text : "");
+    }
+
+    std::string ret{aux ? aux : ""};
+    if (aux) { free(aux); }
+    return ret;
+}
+
 static std::string s_generateEmailBodyResolved(fty_proto_t* alert, const std::string& extname)
 {
-    char*       result_char = translation_get_translated_text(BODY_RESOLVED.c_str());
-    std::string result(result_char);
-    zstr_free(&result_char);
+    const std::string description(s_translation_get_translated_text(fty_proto_description(alert)));
+    std::string result(s_translation_get_translated_text(BODY_RESOLVED.c_str()));
 
-    result                       = replace_tokens(result, "__rulename__", fty_proto_rule(alert));
-    result                       = replace_tokens(result, "__assetname__", extname);
-    char*       description_char = translation_get_translated_text(fty_proto_description(alert));
-    std::string description(description_char);
-    zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description);
+    result = s_replace_tokens(result, "__rulename__", fty_proto_rule(alert));
+    result = s_replace_tokens(result, "__assetname__", extname);
+    result = s_replace_tokens(result, "__description__", description);
     return result;
 }
 
-static std::string s_generateEmailBodyActive(
-    fty_proto_t* alert, const std::string& priority, const std::string& extname)
+static std::string s_generateEmailBodyActive(fty_proto_t* alert, const std::string& priority, const std::string& extname)
 {
-    char*       result_char = translation_get_translated_text(BODY_ACTIVE.c_str());
-    std::string result(result_char);
-    zstr_free(&result_char);
+    const std::string description(s_translation_get_translated_text(fty_proto_description(alert)));
+    std::string result(s_translation_get_translated_text(BODY_ACTIVE.c_str()));
 
-    result                       = replace_tokens(result, "__rulename__", fty_proto_rule(alert));
-    result                       = replace_tokens(result, "__assetname__", extname);
-    char*       description_char = translation_get_translated_text(fty_proto_description(alert));
-    std::string description(description_char);
-    zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description);
-    result = replace_tokens(result, "__priority__", priority);
-    result = replace_tokens(result, "__severity__", fty_proto_severity(alert));
-    result = replace_tokens(result, "__state__", fty_proto_state(alert));
+    result = s_replace_tokens(result, "__rulename__", fty_proto_rule(alert));
+    result = s_replace_tokens(result, "__assetname__", extname);
+    result = s_replace_tokens(result, "__description__", description);
+    result = s_replace_tokens(result, "__priority__", priority);
+    result = s_replace_tokens(result, "__severity__", fty_proto_severity(alert));
+    result = s_replace_tokens(result, "__state__", fty_proto_state(alert));
     return result;
 }
 
 static std::string s_generateEmailSubjectResolved(fty_proto_t* alert, const std::string& extname)
 {
-    char*       result_char = translation_get_translated_text(SUBJECT_RESOLVED.c_str());
-    std::string result(result_char);
-    zstr_free(&result_char);
-    result = replace_tokens(result, "__rulename__", fty_proto_rule(alert));
-    result = replace_tokens(result, "__assetname__", extname);
+    std::string result(s_translation_get_translated_text(SUBJECT_RESOLVED.c_str()));
+
+    result = s_replace_tokens(result, "__rulename__", fty_proto_rule(alert));
+    result = s_replace_tokens(result, "__assetname__", extname);
     return result;
 }
 
-static std::string s_generateEmailSubjectActive(
-    fty_proto_t* alert, const std::string& priority, const std::string& extname)
+static std::string s_generateEmailSubjectActive(fty_proto_t* alert, const std::string& priority, const std::string& extname)
 {
-    char*       result_char = translation_get_translated_text(SUBJECT_ACTIVE.c_str());
-    std::string result(result_char);
-    zstr_free(&result_char);
-    result                       = replace_tokens(result, "__rulename__", fty_proto_rule(alert));
-    result                       = replace_tokens(result, "__assetname__", extname);
-    char*       description_char = translation_get_translated_text(fty_proto_description(alert));
-    std::string description(description_char);
-    zstr_free(&description_char);
-    result = replace_tokens(result, "__description__", description);
-    result = replace_tokens(result, "__priority__", priority);
-    result = replace_tokens(result, "__severity__", fty_proto_severity(alert));
-    result = replace_tokens(result, "__state__", fty_proto_state(alert));
+    const std::string description(s_translation_get_translated_text(fty_proto_description(alert)));
+    std::string result(s_translation_get_translated_text(SUBJECT_ACTIVE.c_str()));
+
+    result = s_replace_tokens(result, "__rulename__", fty_proto_rule(alert));
+    result = s_replace_tokens(result, "__assetname__", extname);
+    result = s_replace_tokens(result, "__description__", description);
+    result = s_replace_tokens(result, "__priority__", priority);
+    result = s_replace_tokens(result, "__severity__", fty_proto_severity(alert));
+    result = s_replace_tokens(result, "__state__", fty_proto_state(alert));
     return result;
 }
 
@@ -147,6 +153,11 @@ static std::string s_generateEmailSubjectActive(
 
 std::string generate_body(fty_proto_t* alert, const std::string& priority, const std::string& extname)
 {
+    if (!alert) {
+        logError("Alert is NULL");
+        return "";
+    }
+
     if (streq(fty_proto_state(alert), "RESOLVED")) {
         return s_generateEmailBodyResolved(alert, extname);
     }
@@ -155,6 +166,11 @@ std::string generate_body(fty_proto_t* alert, const std::string& priority, const
 
 std::string generate_subject(fty_proto_t* alert, const std::string& priority, const std::string& extname)
 {
+    if (!alert) {
+        logError("Alert is NULL");
+        return "";
+    }
+
     if (streq(fty_proto_state(alert), "RESOLVED")) {
         return s_generateEmailSubjectResolved(alert, extname);
     }
