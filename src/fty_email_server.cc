@@ -21,11 +21,11 @@
 
 /// Email actor
 
+#include "fty_email.h"
 #include "fty_email_server.h"
 #include "email.h"
 #include "emailconfiguration.h"
-#include "fty_email.h"
-#include "fty_email_audit_log.h"
+#include "audit_log.h"
 #include <fty_common_quote_codec.h>
 #include <algorithm>
 #include <fty/convert.h>

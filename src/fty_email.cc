@@ -22,8 +22,8 @@
 /// fty_email - Email transport for 42ity project
 
 #include "fty_email.h"
-#include "fty_email_audit_log.h"
 #include "fty_email_server.h"
+#include "audit_log.h"
 #include <fty/convert.h>
 #include <fty_common_translation.h>
 #include <fty_log.h>
@@ -204,8 +204,9 @@ int main(int argc, char** argv)
         }
     }
 
-    if (verbose)
+    if (verbose) {
         ManageFtyLog::getInstanceFtylog()->setVerboseMode();
+    }
 
     log_info("START fty-email - Daemon that is responsible for email notification about alerts");
 

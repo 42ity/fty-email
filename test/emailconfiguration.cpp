@@ -1,4 +1,5 @@
 #include <catch2/catch.hpp>
+
 #include "src/emailconfiguration.h"
 #include <fty_log.h>
 #include <fty_common_translation.h>

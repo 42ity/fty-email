@@ -102,38 +102,38 @@ public:
     void host(const std::string& host)
     {
         _host = host;
-    };
+    }
 
     /// set the SMTP server port. Default is 25.
     void port(const std::string& port)
     {
         _port = port;
-    };
+    }
 
     /// set the "mail from" address
     void from(const std::string& from)
     {
         _from = from;
-    };
+    }
 
     /// set username for smtp authentication
     void username(const std::string& username)
     {
         _username = username;
-    };
+    }
 
     /// set password for smtp authentication
     void password(const std::string& password)
     {
         _password = password;
-    };
+    }
 
     /// set the encryption for SMTP communication (NONE|TLS|STARTTLS)
-    void encryption(std::string enc);
+    void encryption(const std::string& enc);
     void encryption(Encryption enc)
     {
         _encryption = enc;
-    };
+    }
 
     /// turn on or of the CA verification
     void verify_ca(bool verify)
@@ -236,3 +236,4 @@ std::string sms_email_address(const std::string& gw_template, const std::string&
 
 /// Convert msmtp stderr to error code
 SmtpError msmtp_stderr2code(const std::string& inp);
+

@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_email_audit_log - Manage audit log
+    audit_log - Manage audit log
 
     Copyright (C) 2014 - 2021 Eaton
 
@@ -21,12 +21,12 @@
 
 /*
 @header
-    fty_email_audit_log - Manage audit log
+    audit_log - Manage audit log
 @discuss
 @end
 */
 
-#include "fty_email_audit_log.h"
+#include "audit_log.h"
 
 Ftylog* AuditLogManager::_auditLogger = nullptr;
 

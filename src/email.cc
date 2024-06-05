@@ -137,7 +137,7 @@ void Smtp::deleteConfigFile(std::string& filename) const
     unlink(filename.c_str());
 }
 
-void Smtp::encryption(std::string enc)
+void Smtp::encryption(const std::string& enc)
 {
     if (strcasecmp("starttls", enc.c_str()) == 0)
         encryption(Encryption::STARTTLS);

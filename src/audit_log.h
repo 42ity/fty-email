@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_email_audit_log - Manage audit log
+    audit_log - Manage audit log
 
     Copyright (C) 2014 - 2021 Eaton
 

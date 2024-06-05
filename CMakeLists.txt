@@ -3,7 +3,7 @@ cmake_policy(VERSION 3.13)
 
 project(fty-email
     VERSION 1.0.0
-    DESCRIPTION "Email transport for 42ity (based on msmtp)"
+    DESCRIPTION "fty-email service"
 )
 
 ##############################################################################################################
@@ -13,19 +13,20 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
 ##############################################################################################################
 etn_target(static ${PROJECT_NAME}-static
     SOURCES
-        src/email.cc
-        src/emailconfiguration.cc
-        src/fty_email_audit_log.cc
-        src/emailconfiguration.h
         src/email.h
+        src/email.cc
+        src/emailconfiguration.h
+        src/emailconfiguration.cc
+        src/audit_log.h
+        src/audit_log.cc
         src/fty_email.h
-        src/fty_email_server.cc
         src/fty_email_server.h
+        src/fty_email_server.cc
     USES
         czmq
         mlm
         magic
-        cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+        cxxtools
         fty-utils
         fty_common
         fty_proto
@@ -79,7 +80,6 @@ etn_configure_file(
 # systemd service
 etn_configure_file(
     src/conf/${PROJECT_NAME}.service.in
-
     TARGET      ${PROJECT_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/systemd/system/
 )

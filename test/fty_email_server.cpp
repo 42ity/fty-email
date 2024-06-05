@@ -1,9 +1,10 @@
-#include "src/fty_email_server.h"
-#include "src/emailconfiguration.h"
-#include "src/fty_email.h"
-#include "src/fty_email_audit_log.h"
-
 #include <catch2/catch.hpp>
+
+#include "src/fty_email_server.h"
+#include "src/fty_email.h"
+#include "src/emailconfiguration.h"
+#include "src/audit_log.h"
+
 #include <fty/convert.h>
 #include <fty_common_mlm.h>
 #include <fty_common_translation.h>

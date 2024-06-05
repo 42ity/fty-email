@@ -1,11 +1,12 @@
+#include <catch2/catch.hpp>
+
+#include "src/fty_email_server.h"
 #include "src/email.h"
 #include "src/emailconfiguration.h"
-#include "src/fty_email_server.h"
-#include "src/fty_email_audit_log.h"
+#include "src/audit_log.h"
 
-#include <catch2/catch.hpp>
-#include <fstream>
 #include <fty_log.h>
+#include <fstream>
 
 TEST_CASE("email test")
 {
