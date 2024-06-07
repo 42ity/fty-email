@@ -1,4 +1,4 @@
-#   fty-email configuration
+#   @PROJECT_NAME@ configuration
 
 server = ""
     verbose = "false"

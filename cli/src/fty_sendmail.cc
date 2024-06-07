@@ -34,11 +34,12 @@
 
 #include "fty_email.h"
 #include "fty_email_server.h"
+
+#include <fty_log.h>
 #include <fty_common_mlm.h>
 #include <getopt.h>
 #include <vector>
 #include <string>
-#include <fty_log.h>
 #include <iostream>
 
 void usage()
@@ -129,7 +130,7 @@ int main(int argc, char** argv)
     }
     // end of the options
 
-    char* endpoint = strdup(FTY_EMAIL_ENDPOINT); // mlm endpouint
+    char* endpoint = strdup(MLM_ENDPOINT); // mlm endpoint
     char* fty_email_address = strdup(FTY_EMAIL_ADDRESS); // fty-email agent
     char* address = zsys_sprintf("fty-sendmail.%d", getpid()); // client
 

@@ -25,16 +25,17 @@ Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
     fty-cmake-dev,
-    libfty-utils-dev,
     libzmq3-dev,
     libczmq-dev (>= 3.0.2),
     libmlm-dev (>= 1.0.0),
     libcxxtools-dev,
     libmagic-dev,
+    libfty-utils-dev,
+    libfty-proto-dev,
+    libfty-common-dev,
     libfty-common-logging-dev,
     libfty-common-mlm-dev,
-    libfty-common-translation-dev,
-    libfty-proto-dev
+    libfty-common-translation-dev
 
 Package: fty-email
 Architecture: any

@@ -9,11 +9,12 @@ fty-sendmail ia a command line tool to send email through fty-email to given rec
 To build fty-email project run:
 
 ```bash
-./autogen.sh
-./configure
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=usr -DBUILD_TESTING=On ..
 make
-make check # to run self-test
+sudo make install
 ```
+
 Compilation of fty-email creates two binaries - fty-email, which is run by systemd service, and fty-sendmail, which is a CLI utility.
 
 Distributed together with them is a shell script fty-device-scan, which scans SNMP-capable power devices and reports the result via e-mail.
@@ -22,10 +23,10 @@ Distributed together with them is a shell script fty-device-scan, which scans SN
 
 To run fty-email project:
 
-* from within the source tree, run:
+* from within the build tree, run:
 
 ```bash
-./src/fty-email
+./agent/fty-email
 ```
 
 For the other options available, refer to the manual page of fty-email
@@ -111,7 +112,7 @@ In default configuration, agent doesn't publish any alerts.
 
 ### Sending e-mails
 
-Sending of e-mails is handled by class email, which implements a wrapper for msmtp binary.
+Sending of e-mails is handled by class email, which implements a wrapper for smtp binary.
 
 NB: configuration is loaded once at the start of the server actor. Agent then checks for config changes every time the timer runs.
 

@@ -1,9 +1,9 @@
 #include <catch2/catch.hpp>
 
-#include "src/fty_email_server.h"
-#include "src/email.h"
-#include "src/emailconfiguration.h"
-#include "src/audit_log.h"
+#include "fty_email_server.h"
+#include "email.h"
+#include "emailconfiguration.h"
+#include "audit_log.h"
 
 #include <fty_log.h>
 #include <fstream>
