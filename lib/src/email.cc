@@ -125,11 +125,15 @@ std::string Smtp::createConfigFile() const
     line += "port " + _port + "\n";
     line += "from " + _from + "\n";
 
-    char filename[] = "/tmp/bios-msmtp-XXXXXX.cfg";
-    int handle = mkstemps(filename, 4); // 4 = len(".cfg")
+    char filename[] = "/tmp/msmtp-XXXXXX.cfg";
+    int file = mkstemps(filename, strlen(".cfg"));
+    if (file == -1) {
+        log_error("Failed to create msmtp configuration file (%s)", strerror(errno));
+        throw std::runtime_error("Failed to create configuration file");
+    }
     log_debug("msmtp configuration file: %s\n%s", filename, line.c_str());
-    ssize_t r = write(handle, line.c_str(), line.size());
-    close(handle);
+    ssize_t r = write(file, line.c_str(), line.size());
+    close(file);
 
     if ((r > 0) && (static_cast<size_t>(r) != line.size())) {
         log_error("write to %s was truncated, expected %zu, written %zd", filename, line.size(), r);
@@ -229,20 +233,15 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     zmsg_t* msg = *msg_p; // take msg ownership
     *msg_p = nullptr;
 
-    cxxtools::MimeMultipart mime;
-
     // CAUTION: assume no uid defined
     std::string to      = popString(msg);
     std::string subject = popString(msg);
-    std::string body    = getIpAddr();
-    body += popString(msg);
+    std::string body    = getIpAddr() + popString(msg) + "\r\n";
+
+    cxxtools::MimeMultipart mime;
 
     mime.setHeader("To", to);
-
-    if (subject.empty()) {
-        subject = "No Subject";
-    }
-    mime.setHeader("Subject", subject);
+    mime.setHeader("Subject", subject.empty() ? "No subject" : subject);
     mime.addObject(body);
 
     // new protocol have more frames
@@ -252,19 +251,19 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         zframe_destroy(&frame);
         zhash_autofree(headers);
 
-        for (char* value = static_cast<char*>(zhash_first(headers)); value != nullptr;
-             value       = static_cast<char*>(zhash_next(headers))) {
+        for (void* p = zhash_first(headers); p; p = zhash_next(headers)) {
             const char* key = zhash_cursor(headers);
+            char* value = static_cast<char*>(p);
             mime.setHeader(key, value);
         }
         zhash_destroy(&headers);
 
         // NOTE: setLocale(LC_DATE, "C") should be called in outer scope
-        time_t     t   = ::time(nullptr);
+        char now[256];
+        time_t t = ::time(nullptr);
         struct tm* tmp = ::localtime(&t);
-        char       buf[256];
-        strftime(buf, sizeof(buf), "%a, %d %b %Y %T %z\n", tmp);
-        mime.setHeader("Date", buf);
+        strftime(now, sizeof(now), "%a, %d %b %Y %T %z\n", tmp);
+        mime.setHeader("Date", now);
 
         while (zmsg_size(msg) != 0) {
             char*       path      = zmsg_popstr(msg);
@@ -290,9 +289,9 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 
     zmsg_destroy(&msg);
 
-    std::stringstream buff;
-    buff << mime;
-    return buff.str();
+    std::stringstream ss;
+    ss << mime;
+    return ss.str();
 }
 
 std::string sms_email_address(const std::string& gw_template, const std::string& phone_number)

@@ -183,7 +183,7 @@ void fty_email_server(zsock_t* pipe, void* args)
             char*   cmd = zmsg_popstr(msg);
             bool term = false;
 
-            log_debug("%s:\tcommand=%s", name, cmd);
+            log_debug("%s: command=%s", name, cmd);
 
             if (streq(cmd, "$TERM")) {
                 log_trace("Got $TERM");
@@ -310,7 +310,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                                  child            = zconfig_next(child)) {
                                 const char* stream  = zconfig_name(child);
                                 const char* pattern = zconfig_value(child);
-                                log_debug("%s:\tstream/pattern=%s/%s", name, stream, pattern);
+                                log_debug("%s: stream/pattern=%s/%s", name, stream, pattern);
 
                                 // check if we're already connected to not let replay log to explode :)
                                 if (streams.count(std::make_tuple(stream, pattern)) == 1)
@@ -318,7 +318,7 @@ void fty_email_server(zsock_t* pipe, void* args)
 
                                 int r = mlm_client_set_consumer(client, stream, pattern);
                                 if (r != 0) {
-                                    log_warning("%s:\tcannot subscribe on %s/%s", name, stream, pattern);
+                                    log_warning("%s: cannot subscribe on %s/%s", name, stream, pattern);
                                 }
                                 else {
                                     streams.insert(std::make_tuple(stream, pattern));
@@ -340,7 +340,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                         const char* stream = zconfig_get(config, "malamute/producer", NULL);
                         int r = mlm_client_set_producer(client, stream);
                         if (r != 0) {
-                            log_warning("%s:\tcannot publish on %s", name, stream);
+                            log_warning("%s: cannot publish on %s", name, stream);
                         }
                         else {
                             producer = true;
@@ -361,7 +361,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                     assert(endpoint);
                     int r = mlm_client_connect(test_client, endpoint, 1000, "smtp-test-client");
                     if (r != 0) {
-                        log_error("%s\t:can't connect on test_client, endpoint=%s", name, endpoint);
+                        log_error("%s :can't connect on test_client, endpoint=%s", name, endpoint);
                     }
                 }
                 std::function<void(const std::string&)> cb = [test_client, test_reader_name](const std::string& data) {
@@ -383,7 +383,7 @@ void fty_email_server(zsock_t* pipe, void* args)
         else if (which == mlm_client_msgpipe(client)) {
             zmsg_t* msg = mlm_client_recv(client);
             if (!msg) {
-                log_debug("%s:\tmsg is NULL", name);
+                log_debug("%s: msg is NULL", name);
                 continue;
             }
 
@@ -393,7 +393,7 @@ void fty_email_server(zsock_t* pipe, void* args)
             {
                 std::string sender = mlm_client_sender(client);
                 std::string subject = mlm_client_subject(client);
-                log_debug("%s:\tMAILBOX DELIVER, sender=%s, subject=%s", name, sender.c_str(), subject.c_str());
+                log_debug("%s: MAILBOX DELIVER, sender=%s, subject=%s", name, sender.c_str(), subject.c_str());
 
                 char* uuid = zmsg_popstr(msg);
                 if (!uuid) {
@@ -410,42 +410,42 @@ void fty_email_server(zsock_t* pipe, void* args)
                 {
                     bool sent_ok = false;
                     try {
+                        std::string data;
                         if (zmsg_size(msg) == 1) {
-                            std::string body = getIpAddr();
-                            ZstrGuard   bodyTemp(zmsg_popstr(msg));
-                            body += bodyTemp.get();
-                            log_debug("%s:\tsmtp.sendmail (%s)", name, body.c_str());
-                            log_debug_email_audit("%s: Send email: %s", name, body.c_str());
-                            smtp.sendmail(body);
+                            log_debug("mono part msg");
+                            ZstrGuard body(zmsg_popstr(msg));
+                            data = getIpAddr() + body.get();
                         }
                         else {
+                            log_debug("multi part msg");
                             zmsg_print(msg);
-                            auto mail = smtp.msg2email(&msg);
-                            log_debug("%s:\tSend email: %s", name, mail.c_str());
-                            log_debug_email_audit("%s: Send email: %s", name, mail.c_str());
-                            smtp.sendmail(mail);
+                            data = smtp.msg2email(&msg);
                         }
+
+                        log_debug("%s: Send email: data=\n%s", name, data.c_str());
+                        log_debug_email_audit("%s: Send email: %s", name, data.c_str());
+                        smtp.sendmail(data);
 
                         zmsg_addstr(reply, "0");
                         zmsg_addstr(reply, "OK");
                         sent_ok = true;
-                    }
-                    catch (const std::runtime_error& re) {
-                        log_debug("%s:\tgot std::runtime_error, e.what ()=%s", name, re.what());
-                        log_error_email_audit("%s: Send email error: %s", name, re.what ());
 
-                        uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(re.what()));
-                        auto errMsg = humanReadableErrorMessage(re.what());
+                        log_info_email_audit("%s: Send email ok", name);
+                    }
+                    catch (const std::exception& e) {
+                        log_debug("%s: exception reached: %s", name, e.what());
+
+                        uint32_t code = static_cast<uint32_t>(msmtp_stderr2code(e.what()));
+                        auto errMsg = humanReadableErrorMessage(e.what());
 
                         zmsg_addstrf(reply, "%" PRIu32, code);
                         zmsg_addstr(reply, UTF8::escape(errMsg.c_str()).c_str());
                         sent_ok = false;
+
+                        log_error_email_audit("%s: Send email error: %s", name, e.what ());
                     }
 
-                    log_debug("%s:\t%s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
-                    if (sent_ok) {
-                        log_info_email_audit("%s: Send email ok", name);
-                    }
+                    log_debug("%s: %s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
 
                     const char* replySubject = sent_ok ? "SENDMAIL-OK" : "SENDMAIL-ERR";
                     int r = mlm_client_sendto(client, sender.c_str(), replySubject, NULL, 1000, &reply);
@@ -495,7 +495,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                         sent_ok = false;
                     }
 
-                    log_debug("%s:\t%s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
+                    log_debug("%s: %s Send mail %s", name, subject.c_str(), (sent_ok ? "SUCCESS" : "FAILED"));
                     if (sent_ok) {
                         log_info_email_audit("%s: Send email/SMS alert OK: (gateway=%s contact=%s extname=%s alert=%s)",
                             name, gateway.c_str(), audit_contact.c_str(), (extname ? extname : ""), rule);
@@ -513,7 +513,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                 }
                 else
                 {
-                    log_warning("%s:\tUnknown subject %s", name, subject.c_str());
+                    log_warning("%s: Unknown subject %s", name, subject.c_str());
                 }
 
                 zmsg_destroy(&reply);
@@ -522,7 +522,7 @@ void fty_email_server(zsock_t* pipe, void* args)
         }
     }
 
-    log_info("%s:\tfty_email_server ended", name);
+    log_info("%s: fty_email_server ended", name);
 
     zstr_free(&name);
     zstr_free(&endpoint);
