@@ -52,6 +52,7 @@ TEST_CASE("email test")
     zmsg_t* email_msg = fty_email_encode("uuid", "to", "subject", headers, "body", "file1", "file2.txt", NULL);
     REQUIRE(email_msg);
     zhash_destroy(&headers);
+
     std::ofstream ofile1{"file1", std::ios::binary};
     ofile1.write("MZ\0\0\0\0\0\0", 8);
     ofile1.flush();

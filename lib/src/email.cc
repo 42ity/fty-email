@@ -77,16 +77,16 @@ void Smtp::initialize()
 
 std::string Smtp::createConfigFile() const
 {
+    if (_host.empty()) {
+        log_error("Host is empty");
+        throw std::runtime_error("Host is empty");
+    }
+
     const std::string verify_ca = _verify_ca ? "on" : "off";
 
     std::string line = "defaults\n";
 
     switch (_encryption) {
-        case Encryption::NONE:
-            line +=
-                "tls off\n"
-                "tls_starttls off\n";
-            break;
         case Encryption::TLS:
             line +=
                 "tls on\n"
@@ -99,6 +99,15 @@ std::string Smtp::createConfigFile() const
                 "tls_certcheck " + verify_ca + "\n"
                 "tls_starttls on\n";
             break;
+        case Encryption::NONE:
+        default:
+            if (_encryption != Encryption::NONE) {
+                log_warning("Encryption '%d' not handled (default to NONE)", static_cast<int>(_encryption));
+            }
+
+            line +=
+                "tls off\n"
+                "tls_starttls off\n";
     }
 
     if (_username.empty()) {
@@ -132,49 +141,48 @@ std::string Smtp::createConfigFile() const
     return std::string(filename);
 }
 
-void Smtp::deleteConfigFile(std::string& filename) const
+void Smtp::deleteConfigFile(const std::string& filename) const
 {
     unlink(filename.c_str());
 }
 
 void Smtp::encryption(const std::string& enc)
 {
-    if (strcasecmp("starttls", enc.c_str()) == 0)
+    if (strcasecmp("starttls", enc.c_str()) == 0) {
         encryption(Encryption::STARTTLS);
-    else if (strcasecmp("tls", enc.c_str()) == 0)
+    }
+    else if (strcasecmp("tls", enc.c_str()) == 0) {
         encryption(Encryption::TLS);
-    else
+    }
+    else {
         encryption(Encryption::NONE);
+    }
 }
 
-void Smtp::sendmail(const std::vector<std::string>& to, const std::string& subject, const std::string& body) const
+void Smtp::sendmail(const std::vector<std::string>& vsTo, const std::string& subject, const std::string& body) const
 {
-    for (const auto& it : to) {
-        // encode *without* uid
-        zmsg_t* msg = fty_email_encode(nullptr/*uid*/, it.c_str(), subject.c_str(), nullptr/*headers*/, body.c_str(), nullptr);
-        sendmail(msg2email(&msg));
-        zmsg_destroy(&msg);
+    for (const auto& to : vsTo) {
+        sendmail(to, subject, body);
     }
 }
 
 void Smtp::sendmail(const std::string& to, const std::string& subject, const std::string& body) const
 {
-    return sendmail(std::vector<std::string>{to}, subject, body);
+    // encode *without* uid
+    zmsg_t* msg = fty_email_encode(nullptr/*uid*/, to.c_str(), subject.c_str(), nullptr/*headers*/, body.c_str(), nullptr);
+    std::string data = msg2email(&msg);
+    zmsg_destroy(&msg);
+    sendmail(data);
 }
 
 void Smtp::sendmail(const std::string& data) const
 {
-    // for testing
-    if (_has_fn) {
+    if (_has_fn) { // test
         _fn(data);
         return;
     }
 
     std::string cfg = createConfigFile();
-
-    if (_host.empty()) {
-        return;
-    }
 
     fty::Process proc(_msmtp, {"-t", "-C", cfg});
     auto bret = proc.run();
@@ -188,23 +196,22 @@ void Smtp::sendmail(const std::string& data) const
         log_warning("Email truncated");
     }
 
-    auto ret = proc.wait(50000);
+    auto ret = proc.wait(60000);
     deleteConfigFile(cfg);
     if (!ret) {
         throw std::runtime_error(_msmtp + " wait with '" + ret.error() + "'");
     }
 
     if (*ret != 0) {
-        std::string msg = _msmtp + " failed with exit code '" + std::to_string(*ret)
+        std::string err = _msmtp + " failed with exit code '" + std::to_string(*ret)
             + "'\nstderr: " + proc.readAllStandardError() + "\n";
-        throw std::runtime_error(msg);
+        throw std::runtime_error(err);
     }
 }
 
 static bool s_is_text(const char* mime)
 {
-    assert(mime);
-    return !strncmp(mime, "text", 4);
+    return mime && (strncmp(mime, "text", 4) == 0);
 }
 
 static std::string popString(zmsg_t* msg)
@@ -219,10 +226,12 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 {
     assert(msg_p && *msg_p);
 
+    zmsg_t* msg = *msg_p; // take msg ownership
+    *msg_p = nullptr;
+
     cxxtools::MimeMultipart mime;
 
-    zmsg_t* msg = *msg_p;
-
+    // CAUTION: assume no uid defined
     std::string to      = popString(msg);
     std::string subject = popString(msg);
     std::string body    = getIpAddr();
@@ -267,18 +276,19 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 
             std::ifstream ipath{path};
 
-            if (s_is_text(mime_type))
+            if (s_is_text(mime_type)) {
                 mime.attachTextFile(ipath, basename(path), mime_type);
-            else
+            }
+            else {
                 mime.attachBinaryFile(ipath, basename(path), mime_type);
+            }
 
             ipath.close();
             zstr_free(&path);
         }
     }
 
-    zmsg_destroy(msg_p);
-    msg = nullptr;
+    zmsg_destroy(&msg);
 
     std::stringstream buff;
     buff << mime;
@@ -310,11 +320,10 @@ std::string sms_email_address(const std::string& gw_template, const std::string&
     return ret;
 }
 
+// consider inp as the msmtp process error output
+// search for patterns to retrieve some useful SmtpError
 SmtpError msmtp_stderr2code(const std::string& inp)
 {
-    if (inp.empty())
-        return SmtpError::Succeeded;
-
     static std::regex ServerUnreachable{"cannot connect to .*, port .*"};
     static std::regex DNSFailed{
         ".*(cannot locate host.*: Name or service not known|the server does not support DNS).*", std::regex::extended};
@@ -329,23 +338,27 @@ SmtpError msmtp_stderr2code(const std::string& inp)
         ".*(no certificate was founderror gettint .* fingerprint|the certificate fingerprint does not match|the "
         "certificate has been revoked|the certificate hasn't got a known issuer|the certificate is not trusted).*"};
 
-    if (std::regex_match(inp, ServerUnreachable))
+    if (inp.empty()) {
+        return SmtpError::Succeeded;
+    }
+    if (std::regex_match(inp, ServerUnreachable)) {
         return SmtpError::ServerUnreachable;
-
-    if (std::regex_match(inp, DNSFailed))
+    }
+    if (std::regex_match(inp, DNSFailed)) {
         return SmtpError::DNSFailed;
-
-    if (std::regex_match(inp, AuthMethodNotSupported))
+    }
+    if (std::regex_match(inp, AuthMethodNotSupported)) {
         return SmtpError::AuthMethodNotSupported;
-
-    if (std::regex_match(inp, AuthFailed))
+    }
+    if (std::regex_match(inp, AuthFailed)) {
         return SmtpError::AuthFailed;
-
-    if (std::regex_match(inp, SSLNotSupported))
+    }
+    if (std::regex_match(inp, SSLNotSupported)) {
         return SmtpError::SSLNotSupported;
-
-    if (std::regex_match(inp, UnknownCA))
+    }
+    if (std::regex_match(inp, UnknownCA)) {
         return SmtpError::UnknownCA;
+    }
 
     return SmtpError::Unknown;
 }
