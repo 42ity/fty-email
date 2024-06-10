@@ -179,13 +179,13 @@ std::string generate_subject(fty_proto_t* alert, const std::string& priority, co
 
 std::string getIpAddr()
 {
-    std::string     ipAddr       = "From: ";
     struct ifaddrs* ifAddrStruct = NULL;
     struct ifaddrs* ifa          = NULL;
     void*           tmpAddrPtr   = NULL;
 
     getifaddrs(&ifAddrStruct);
 
+    std::string ipAddr;
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
         // Check IP4 address
         if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
@@ -193,7 +193,7 @@ std::string getIpAddr()
             char addressBuffer[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
             if (strcmp(ifa->ifa_name, "eth0") == 0 || strcmp(ifa->ifa_name, "LAN1") == 0) {
-                ipAddr.append(addressBuffer);
+                ipAddr = std::string{addressBuffer};
                 break;
             }
         }
@@ -203,6 +203,6 @@ std::string getIpAddr()
         freeifaddrs(ifAddrStruct);
     }
 
-    ipAddr += "\r\n";
-    return ipAddr;
+    // ZZZ format
+    return "From: " + ipAddr + "\r\n";
 }

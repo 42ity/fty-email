@@ -196,19 +196,21 @@ protected:
     /// create msmtp config file
     std::string createConfigFile() const;
     /// delete msmtp config file
-    void deleteConfigFile(std::string& filename) const;
+    void deleteConfigFile(const std::string& filename) const;
 
-    std::string                             _host;
-    std::string                             _port;
-    std::string                             _from;
-    Encryption                              _encryption{Encryption::NONE};
-    std::string                             _username;
-    std::string                             _password;
-    std::string                             _msmtp;
-    bool                                    _has_fn{false};
-    bool                                    _verify_ca{false};
+    std::string _host;
+    std::string _port;
+    std::string _from;
+    std::string _username;
+    std::string _password;
+    std::string _msmtp;
+    Encryption  _encryption{Encryption::NONE};
+    bool        _verify_ca{false};
+    magic_t     _magic;
+
+    // test
+    bool _has_fn{false};
     std::function<void(const std::string&)> _fn;
-    magic_t                                 _magic;
 };
 
 /// Ciprian's algorithm to obtain email address for given phone number

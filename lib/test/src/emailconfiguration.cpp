@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
-#include "src/emailconfiguration.h"
+#include "emailconfiguration.h"
+
 #include <fty_log.h>
 #include <fty_common_translation.h>
 #include <string>
@@ -8,9 +9,18 @@
 TEST_CASE("emailconfiguration test")
 {
     {
-        int rv = translation_initialize("emailconfiguration-test", "test/conf", "test_");
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+           logDebug("== Current working dir: {}", cwd);
+        }
+    }
+
+    {
+        const char* TEST_CONF = "./conf";
+        logDebug("==== translation_initialize from {}", TEST_CONF);
+        int rv = translation_initialize("emailconfiguration-test", TEST_CONF, "test_");
         if (rv != TE_OK) {
-            log_warning("Translation not initialized");
+            logWarn("Translation not initialized");
         }
     }
 

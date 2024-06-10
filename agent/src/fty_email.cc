@@ -24,6 +24,7 @@
 #include "fty_email.h"
 #include "fty_email_server.h"
 #include "audit_log.h"
+
 #include <fty/convert.h>
 #include <fty_common_translation.h>
 #include <fty_log.h>
@@ -179,7 +180,7 @@ int main(int argc, char** argv)
             zconfig_put(config, "smtp/smsgateway", smsgateway.c_str());
         zconfig_put(config, "smtp/verify_ca", !smtpverify.empty() ? "1" : "0");
 
-        zconfig_put(config, "malamute/endpoint", FTY_EMAIL_ENDPOINT);
+        zconfig_put(config, "malamute/endpoint", MLM_ENDPOINT);
         zconfig_put(config, "malamute/address", FTY_EMAIL_ADDRESS);
 
         zconfig_print(config);
@@ -187,13 +188,13 @@ int main(int argc, char** argv)
         config_file = std::string(FTY_EMAIL_CONFIG_FILE);
         int r       = zconfig_save(config, config_file.c_str());
         if (r == -1) {
-            log_error("Error while saving config file %s: %m", config_file);
+            log_error("Error while saving config file %s: %m", config_file.c_str());
             return EXIT_FAILURE;
         }
     } else {
         config = zconfig_load(config_file.c_str());
         if (!config) {
-            log_error("Failed to load config file %s: %m", config_file);
+            log_error("Failed to load config file %s: %m", config_file.c_str());
             return EXIT_FAILURE;
         }
 
