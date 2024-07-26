@@ -57,11 +57,13 @@ void usage()
 
 int main(int argc, char** argv)
 {
-    int                      help    = 0;
-    int                      verbose = 0;
+    int help    = 0;
+    int verbose = 0;
+    std::string config_file;
+
+    std::string              subject;
     std::vector<std::string> attachments;
     const char*              recipient = nullptr;
-    std::string              subj;
 
     ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS_SENDMAIL_ONLY, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
@@ -72,24 +74,25 @@ int main(int argc, char** argv)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif
-    static const char*   short_options  = "vc:s:a:";
-    static struct option long_options[] = {{"help", no_argument, &help, 1}, {"verbose", no_argument, &verbose, 1},
-        {"config", required_argument, 0, 'c'}, {"subject", required_argument, 0, 's'},
-        {"attachment", required_argument, 0, 'a'}, {NULL, 0, 0, 0}};
+    static const char* short_options  = "vc:s:a:";
+    static struct option long_options[] = {
+        {"help", no_argument, &help, 1},
+        {"verbose", no_argument, &verbose, 1},
+        {"config", required_argument, 0, 'c'},
+        {"subject", required_argument, 0, 's'},
+        {"attachment", required_argument, 0, 'a'},
+        {NULL, 0, 0, 0}
+    };
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif
 
-    char* config_file = nullptr;
-    char* p           = nullptr;
-    int c;
-
     while (true) {
-
         int option_index = 0;
-        c                = getopt_long(argc, argv, short_options, long_options, &option_index);
+        int c = getopt_long(argc, argv, short_options, long_options, &option_index);
         if (c == -1)
             break;
+
         switch (c) {
             case 'v':
                 verbose = 1;
@@ -99,15 +102,14 @@ int main(int argc, char** argv)
                 break;
             case 'a':
                 char path[PATH_MAX + 1];
-                p = realpath(optarg, path);
-                if (!p) {
+                if (!realpath(optarg, path)) {
                     log_error("Can't get absolute path for %s: %s", optarg, strerror(errno));
                     return EXIT_FAILURE;
                 }
                 attachments.push_back(path);
                 break;
             case 's':
-                subj = optarg;
+                subject = optarg;
                 break;
             case 0:
                 // just now walking trough some long opt
@@ -134,11 +136,18 @@ int main(int argc, char** argv)
     char* fty_email_address = strdup(FTY_EMAIL_ADDRESS); // fty-email agent
     char* address = zsys_sprintf("fty-sendmail.%d", getpid()); // client
 
-    if (config_file) {
-        log_debug("Loading conf. file (%s)", config_file);
-        zconfig_t* config = zconfig_load(config_file);
+    #define CLEANUP { \
+        zstr_free(&address); \
+        zstr_free(&endpoint); \
+        zstr_free(&fty_email_address); \
+    }
+
+    if (!config_file.empty()) {
+        log_debug("Loading conf. file (%s)", config_file.c_str());
+        zconfig_t* config = zconfig_load(config_file.c_str());
         if (!config) {
-            log_error("Failed to load %s: %m", config_file);
+            log_error("Failed to load %s: %m", config_file.c_str());
+            CLEANUP;
             return EXIT_FAILURE;
         }
 
@@ -165,20 +174,15 @@ int main(int argc, char** argv)
     mlm_client_t* client = mlm_client_new();
     if (!client) {
         log_error("Failed to create client.");
-        zstr_free(&address);
-        zstr_free(&endpoint);
-        zstr_free(&fty_email_address);
+        CLEANUP;
         return EXIT_FAILURE;
     }
 
     int r = mlm_client_connect(client, endpoint, 1000, address);
-    zstr_free(&address);
-    zstr_free(&endpoint);
-
     if (r == -1) {
         log_error("Failed to connect.");
-        zstr_free(&fty_email_address);
         mlm_client_destroy(&client);
+        CLEANUP;
         return EXIT_FAILURE;
     }
 
@@ -186,7 +190,7 @@ int main(int argc, char** argv)
 
     std::istreambuf_iterator<char> begin(std::cin), end;
     std::string body(begin, end);
-    zmsg_t* mail = fty_email_encode("UUID", recipient, subj.c_str(), nullptr, body.c_str(), nullptr);
+    zmsg_t* mail = fty_email_encode("UUID", recipient, subject.c_str(), nullptr, body.c_str(), nullptr);
 
     for (const auto& file : attachments) {
         zmsg_addstr(mail, file.c_str());
@@ -197,13 +201,13 @@ int main(int argc, char** argv)
 
     r = mlm_client_sendto(client, fty_email_address, "SENDMAIL", nullptr, 5000, &mail);
     zmsg_destroy(&mail);
-    zstr_free(&fty_email_address);
 
     log_trace("mlm_client_sendto(), r: %d", r);
 
     if (r != 0) {
         log_error("Failed to send the email (mlm_client_sendto() returned %d)", r);
         mlm_client_destroy(&client);
+        CLEANUP;
         return EXIT_FAILURE;
     }
 
@@ -216,6 +220,7 @@ int main(int argc, char** argv)
     if (!msg) {
         log_error("Recv response is NULL.");
         mlm_client_destroy(&client);
+        CLEANUP;
         return EXIT_FAILURE;
     }
 
@@ -240,6 +245,7 @@ int main(int argc, char** argv)
     zstr_free(&code);
     zstr_free(&reason);
     mlm_client_destroy(&client);
+    CLEANUP;
 
     log_debug("Done");
 
