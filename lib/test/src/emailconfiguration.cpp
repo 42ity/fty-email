@@ -77,6 +77,6 @@ TEST_CASE("emailconfiguration test")
         logDebug("==== getIpAddr");
         std::string s = getIpAddr();
         CHECK(!s.empty());
-        logInfo("\nAddr: '{}'", s);
+        logInfo("{}", s);
     }
 }

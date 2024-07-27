@@ -180,22 +180,22 @@ std::string generate_subject(fty_proto_t* alert, const std::string& priority, co
 std::string getIpAddr()
 {
     struct ifaddrs* ifAddrStruct = NULL;
-    struct ifaddrs* ifa          = NULL;
-    void*           tmpAddrPtr   = NULL;
 
     getifaddrs(&ifAddrStruct);
 
     std::string ipAddr;
-    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
-        // Check IP4 address
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
-            tmpAddrPtr = &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr))->sin_addr;
-            char addressBuffer[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
-            if (strcmp(ifa->ifa_name, "eth0") == 0 || strcmp(ifa->ifa_name, "LAN1") == 0) {
-                ipAddr = std::string{addressBuffer};
-                break;
-            }
+    for (struct ifaddrs* ifa = ifAddrStruct; ifa; ifa = ifa->ifa_next) {
+        // Check IP4 address (eth0/LAN1 interface)
+        if (ifa->ifa_addr
+            && (ifa->ifa_addr->sa_family == AF_INET)
+            && (streq(ifa->ifa_name, "eth0") || streq(ifa->ifa_name, "LAN1"))
+        ) {
+            void* sin_addr = &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr))->sin_addr;
+            char buffer[INET_ADDRSTRLEN];
+            memset(buffer, 0, sizeof(buffer));
+            inet_ntop(AF_INET, sin_addr, buffer, sizeof(buffer));
+            ipAddr = std::string{buffer};
+            break;
         }
     }
 
@@ -203,6 +203,5 @@ std::string getIpAddr()
         freeifaddrs(ifAddrStruct);
     }
 
-    // ZZZ format
-    return "From: " + ipAddr + "\r\n";
+    return ipAddr;
 }

@@ -430,7 +430,7 @@ void fty_email_server(zsock_t* pipe, void* args)
                         if (zmsg_size(msg) == 1) {
                             log_debug("mono part msg");
                             ZstrGuard body(zmsg_popstr(msg));
-                            data = getIpAddr() + body.get();
+                            data = "From: " + getIpAddr() + "\r\n" + body.get();
                         }
                         else {
                             log_debug("multi part msg");
