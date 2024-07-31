@@ -34,13 +34,13 @@
 #define TRANSLATION_PREFIX "locale_"
 
 // hack to allow reload of config file w/o the need to rewrite server to zloop and reactors
-std::string config_file;
+static std::string config_file;
 
-zconfig_t* config = nullptr;
-zactor_t* smtp_server = nullptr;
-zactor_t* send_mail_only_server = nullptr;
+static zconfig_t* config = nullptr;
+static zactor_t* smtp_server = nullptr;
+static zactor_t* send_mail_only_server = nullptr;
 
-void usage()
+static void usage()
 {
     puts(
         "fty-email [options]\n"
@@ -61,7 +61,7 @@ void usage()
 static int s_timer_event(zloop_t* /* loop */, int /* timer_id */, void* /* output */)
 {
     // assume config & config_file are set
-    if (zconfig_has_changed(config)) {
+    if (config && zconfig_has_changed(config)) {
         log_info("Content of %s have changed, reload it", config_file.c_str());
         zconfig_reload(&config);
 
@@ -94,8 +94,9 @@ int main(int argc, char** argv)
     ManageFtyLog::setInstanceFtylog(FTY_EMAIL_ADDRESS, FTY_COMMON_LOGGING_DEFAULT_CFG);
 
     int rv = translation_initialize(FTY_EMAIL_ADDRESS, TRANSLATION_ROOT, TRANSLATION_PREFIX);
-    if (rv != TE_OK)
+    if (rv != TE_OK) {
         log_warning("Translation not initialized");
+    }
 
     // get options
 
@@ -105,21 +106,27 @@ int main(int argc, char** argv)
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif
     static const char*   short_options  = "hvs:p:u:f:e:c:";
-    static struct option long_options[] = {{"help", no_argument, &help, 1}, {"verbose", no_argument, &verbose, 1},
-        {"server", required_argument, 0, 's'}, {"port", required_argument, 0, 'p'}, {"user", required_argument, 0, 'u'},
-        {"from", required_argument, 0, 'f'}, {"encryption", required_argument, 0, 'e'},
-        {"config", required_argument, 0, 'c'}, {nullptr, 0, 0, 0}};
+    static struct option long_options[] = {
+        {"help", no_argument, &help, 1},
+        {"verbose", no_argument, &verbose, 1},
+        {"server", required_argument, 0, 's'},
+        {"port", required_argument, 0, 'p'},
+        {"user", required_argument, 0, 'u'},
+        {"from", required_argument, 0, 'f'},
+        {"encryption", required_argument, 0, 'e'},
+        {"config", required_argument, 0, 'c'},
+        {nullptr, 0, 0, 0}
+    };
 #if defined(__GNUC__) || defined(__GNUG__)
 #pragma GCC diagnostic pop
 #endif
 
-    int c;
     while (true) {
-
         int option_index = 0;
-        c                = getopt_long(argc, argv, short_options, long_options, &option_index);
+        int c = getopt_long(argc, argv, short_options, long_options, &option_index);
         if (c == -1)
             break;
+
         switch (c) {
             case 'v':
                 verbose = 1;
@@ -186,12 +193,14 @@ int main(int argc, char** argv)
         zconfig_print(config);
 
         config_file = std::string(FTY_EMAIL_CONFIG_FILE);
-        int r       = zconfig_save(config, config_file.c_str());
-        if (r == -1) {
+
+        rv = zconfig_save(config, config_file.c_str());
+        if (rv == -1) {
             log_error("Error while saving config file %s: %m", config_file.c_str());
             return EXIT_FAILURE;
         }
-    } else {
+    }
+    else {
         config = zconfig_load(config_file.c_str());
         if (!config) {
             log_error("Failed to load config file %s: %m", config_file.c_str());
@@ -199,7 +208,7 @@ int main(int argc, char** argv)
         }
 
         std::string language = zconfig_get(config, "server/language", DEFAULT_LANGUAGE);
-        rv       = translation_change_language(language.c_str());
+        rv = translation_change_language(language.c_str());
         if (rv != TE_OK) {
             log_warning("Language not changed to %s, continuing in %s", language.c_str(), DEFAULT_LANGUAGE);
         }
@@ -213,7 +222,7 @@ int main(int argc, char** argv)
 
     smtp_server = zactor_new(fty_email_server, nullptr);
     if (!smtp_server) {
-        log_error("smtp_server: cannot start the daemon");
+        log_error("smtp_server: actor failed to start");
         return EXIT_FAILURE;
     }
 
@@ -223,7 +232,7 @@ int main(int argc, char** argv)
         send_mail_only_server = zactor_new(fty_email_server, const_cast<char*>(s));
     }
     if (!send_mail_only_server) {
-        log_error("send_mail_only_server: cannot start the daemon");
+        log_error("send_mail_only_server: actor failed to start");
         zactor_destroy(&smtp_server);
         return EXIT_FAILURE;
     }
@@ -243,7 +252,7 @@ int main(int argc, char** argv)
     // copy from src/malamute.c under MPL license
     while (!zsys_interrupted) {
         char* msg = zstr_recv(smtp_server);
-        if (msg == 0)
+        if (!msg)
             break;
         log_trace("%s: recv msg '%s'", "fty-email", msg);
         zstr_free(&msg);

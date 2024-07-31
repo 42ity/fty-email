@@ -236,7 +236,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     // CAUTION: assume no uid defined
     std::string to      = popString(msg);
     std::string subject = popString(msg);
-    std::string body    = getIpAddr() + popString(msg) + "\r\n";
+    std::string body    = "From: " + getIpAddr() + "\r\n" + popString(msg) + "\r\n";
 
     cxxtools::MimeMultipart mime;
 
