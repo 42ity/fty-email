@@ -71,11 +71,30 @@ static const char* s_get(zconfig_t* config, const char* key, const char* dfl)
     return ret;
 }
 
-zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, zhash_t* headers, const char* body, ...)
+static void replace(std::string& s, const std::vector<std::pair<std::string, std::string>>& dict)
+{
+    for (auto& d : dict) {
+        auto& token{d.first};
+        auto& value{d.second};
+
+        std::size_t pos = s.find(token, 0);
+        while (pos != std::string::npos) {
+            s.replace(pos, token.size(), value);
+            pos = s.find(token, pos + value.size());
+        }
+    }
+}
+
+zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subjectIn, zhash_t* headers, const char* body, ...)
 {
     assert(to);
-    assert(subject);
+    assert(subjectIn);
     assert(body);
+
+    // IPMVAL-5369: avoid '% n' sequence in subject (printf coredump)
+    std::string subject{subjectIn ? subjectIn : ""};
+    replace(subject, {{"% n", "%_n"}});
+    logDebug("subject: {}", subject);
 
     zmsg_t* msg = zmsg_new();
     if (!msg) {
@@ -86,7 +105,7 @@ zmsg_t* fty_email_encode(const char* uuid, const char* to, const char* subject, 
         zmsg_addstr(msg, uuid);
     }
     zmsg_addstr(msg, to);
-    zmsg_addstr(msg, subject);
+    zmsg_addstr(msg, const_cast<char*>(subject.c_str()));
     zmsg_addstr(msg, body);
 
     if (!headers) {
