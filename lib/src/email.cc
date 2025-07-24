@@ -256,7 +256,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         for (void* p = zhash_first(headers); p; p = zhash_next(headers)) {
             const char* key = zhash_cursor(headers);
             char* value = static_cast<char*>(p);
-           log_debug("add header '%s'='%s'", key, value);
+            log_debug("setHeader '%s'='%s'", key, value);
             mime.setHeader(key, value);
         }
         zhash_destroy(&headers);
@@ -266,10 +266,16 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         time_t t = ::time(nullptr);
         struct tm* tmp = ::localtime(&t);
         strftime(now, sizeof(now), "%a, %d %b %Y %T %z\n", tmp);
+        log_debug("setHeader '%s'='%s'", "Date", now);
         mime.setHeader("Date", now);
 
         while (zmsg_size(msg) != 0) {
-            char*       path      = zmsg_popstr(msg);
+            char* path = zmsg_popstr(msg);
+            if (!path) {
+                log_warning("path is NULL");
+                continue;
+            }
+
             const char* mime_type = magic_file(_magic, path);
             if (!mime_type) {
                 log_warning("Can't guess type for %s, using application/octet-stream", path);
@@ -277,15 +283,14 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             }
 
             std::ifstream ipath{path};
-
             if (s_is_text(mime_type)) {
                 mime.attachTextFile(ipath, basename(path), mime_type);
             }
             else {
                 mime.attachBinaryFile(ipath, basename(path), mime_type);
             }
-
             ipath.close();
+
             zstr_free(&path);
         }
     }
