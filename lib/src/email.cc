@@ -244,6 +244,8 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
     mime.setHeader("Subject", subject.empty() ? "No subject" : subject);
     mime.addObject(body);
 
+    log_debug("msg size: %zu", zmsg_size(msg));
+
     // new protocol have more frames
     if (zmsg_size(msg) != 0) {
         zframe_t* frame   = zmsg_pop(msg);
@@ -254,6 +256,7 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         for (void* p = zhash_first(headers); p; p = zhash_next(headers)) {
             const char* key = zhash_cursor(headers);
             char* value = static_cast<char*>(p);
+            log_debug("setHeader '%s'='%s'", key, value);
             mime.setHeader(key, value);
         }
         zhash_destroy(&headers);
@@ -263,10 +266,16 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
         time_t t = ::time(nullptr);
         struct tm* tmp = ::localtime(&t);
         strftime(now, sizeof(now), "%a, %d %b %Y %T %z\n", tmp);
+        log_debug("setHeader '%s'='%s'", "Date", now);
         mime.setHeader("Date", now);
 
         while (zmsg_size(msg) != 0) {
-            char*       path      = zmsg_popstr(msg);
+            char* path = zmsg_popstr(msg);
+            if (!path) {
+                log_warning("path is NULL");
+                continue;
+            }
+
             const char* mime_type = magic_file(_magic, path);
             if (!mime_type) {
                 log_warning("Can't guess type for %s, using application/octet-stream", path);
@@ -274,15 +283,14 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
             }
 
             std::ifstream ipath{path};
-
             if (s_is_text(mime_type)) {
                 mime.attachTextFile(ipath, basename(path), mime_type);
             }
             else {
                 mime.attachBinaryFile(ipath, basename(path), mime_type);
             }
-
             ipath.close();
+
             zstr_free(&path);
         }
     }
@@ -291,7 +299,26 @@ std::string Smtp::msg2email(zmsg_t** msg_p) const
 
     std::stringstream ss;
     ss << mime;
-    return ss.str();
+
+    // IPMPROG-9980/BSOS-1599 : send mail failed with AWS SES mail service
+    // Fix cxxtools 3.0 issue, mime.cpp
+    // MIME-Version header is hardcoded more than once in some stream operators
+    // https://github.com/maekitalo/cxxtools/blob/V3.0/src/mime.cpp L702, L759
+    // => Remove duplicated MIME-Version headers from the mime buffer
+    std::stringstream ss2;
+    {
+        const auto delim{'\n'};
+        bool first{true};
+        std::string line;
+        while (std::getline(ss, line, delim)) {
+            if (line.find("MIME-Version:") == 0) {
+                if (!first) { continue; } // skipped
+                first = false;
+            }
+            ss2 << line << delim;
+        }
+    }
+    return ss2.str();
 }
 
 std::string sms_email_address(const std::string& gw_template, const std::string& phone_number)
